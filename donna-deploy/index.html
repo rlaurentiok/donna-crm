@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Donna</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiRG9ubmEgQ1JNIiwic2hvcnRfbmFtZSI6IkRvbm5hIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwZjBmMTQiLCJ0aGVtZV9jb2xvciI6IiMwZjBmMTQifQ==">
+<style>
+:root{
+  --bg:#0f0f14;
+  --card:#16161d;
+  --card2:#1c1c25;
+  --border:#2a2a35;
+  --text:#f2f2f0;
+  --text-dim:#9a9aa5;
+  --accent:#c9a84c;
+  --accent-dim:#8a7536;
+  --frio:#5b8fd6;
+  --caliente:#e8763d;
+  --cerrado:#4caf6e;
+  --perdido:#e89a3d;
+  --tarea:#a978d6;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-size:15px;
+  line-height:1.4;
+  padding-bottom:90px;
+  -webkit-tap-highlight-color:transparent;
+}
+.serif{font-family:Georgia,"Times New Roman",serif;}
+header{
+  padding:20px 18px 14px;
+  position:sticky;top:0;
+  background:rgba(15,15,20,0.95);
+  backdrop-filter:blur(8px);
+  z-index:50;
+  border-bottom:1px solid var(--border);
+}
+header h1{font-size:22px;font-weight:600;letter-spacing:0.5px;}
+header h1 span{color:var(--accent);font-style:italic;}
+header .sub{color:var(--text-dim);font-size:12px;margin-top:2px;}
+
+.container{padding:14px 16px;max-width:600px;margin:0 auto;transition:max-width 0.2s;}
+
+/* En pantallas grandes (PC/tablet), el calendario se ensancha para usar el espacio */
+@media (min-width: 900px){
+  .container.wide-cal{max-width:1100px;}
+  .week-grid{
+    grid-template-columns:52px repeat(7, minmax(120px,1fr));
+  }
+  .cal-grid{
+    gap:8px;
+  }
+}
+
+/* BANNER */
+.banner{
+  background:linear-gradient(135deg,var(--card2),var(--card));
+  border:1px solid var(--accent-dim);
+  border-radius:var(--radius);
+  padding:14px 16px;
+  margin-bottom:16px;
+}
+.banner-title{font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:600;}
+.banner-empty{color:var(--text-dim);font-size:13px;padding:6px 0;}
+.task-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--border);
+  gap:10px;
+}
+.task-item:last-child{border-bottom:none;}
+.task-info{flex:1;min-width:0;}
+.task-name{font-weight:600;font-size:14px;}
+.task-detail{font-size:12px;color:var(--text-dim);margin-top:1px;}
+.task-tag{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;}
+.tag-seguimiento{background:rgba(91,143,214,0.15);color:var(--frio);}
+.tag-postventa{background:rgba(76,175,110,0.15);color:var(--cerrado);}
+.tag-tarea{background:rgba(169,120,214,0.15);color:var(--tarea);}
+.task-item.is-tomorrow{opacity:0.75;}
+.banner-subtitle{font-size:11px;color:var(--text-dim);margin:14px 0 6px;text-transform:uppercase;letter-spacing:0.5px;}
+.task-actions{display:flex;gap:6px;}
+.btn-icon{
+  background:var(--card2);border:1px solid var(--border);color:var(--text);
+  width:30px;height:30px;border-radius:8px;font-size:14px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.btn-icon:active{background:var(--accent-dim);}
+
+/* NAV */
+.tabs{
+  display:flex;gap:6px;margin-bottom:16px;background:var(--card);padding:4px;border-radius:12px;
+}
+.tab{
+  flex:1;text-align:center;padding:9px 0;border-radius:9px;font-size:13px;font-weight:600;color:var(--text-dim);cursor:pointer;
+}
+.tab.active{background:var(--accent);color:#1a1a1a;}
+
+/* CALENDAR */
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.cal-header h2{font-size:17px;text-transform:capitalize;}
+.cal-nav{display:flex;gap:8px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.cal-dow{text-align:center;font-size:10px;color:var(--text-dim);padding-bottom:6px;text-transform:uppercase;}
+.cal-day{
+  aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:10px;background:var(--card);font-size:13px;cursor:pointer;position:relative;
+  border:1px solid transparent;
+}
+.cal-day.empty{background:transparent;cursor:default;}
+.cal-day.today{border-color:var(--accent);}
+.cal-day.selected{background:var(--accent);color:#1a1a1a;}
+.cal-day .dots{display:flex;gap:2px;margin-top:3px;position:absolute;bottom:5px;}
+.dot{width:5px;height:5px;border-radius:50%;}
+
+.day-list{margin-top:16px;}
+.day-list h3{font-size:14px;color:var(--text-dim);margin-bottom:10px;}
+
+/* VIEW TOGGLE (semana/mes) */
+.view-toggle{display:flex;gap:6px;margin-bottom:12px;background:var(--card);padding:4px;border-radius:10px;width:fit-content;}
+.view-opt{padding:7px 16px;border-radius:7px;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;}
+.view-opt.active{background:var(--accent);color:#1a1a1a;}
+
+/* WEEK VIEW (agenda style) */
+.week-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);}
+.week-grid{
+  display:grid;
+  grid-template-columns:42px repeat(7, minmax(86px,1fr));
+  min-width:650px;
+}
+.week-corner{position:sticky;left:0;background:var(--card);z-index:3;border-bottom:1px solid var(--border);}
+.week-dow-header{
+  text-align:center;padding:8px 2px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);
+  font-size:11px;cursor:pointer;position:sticky;top:0;background:var(--card);z-index:2;
+}
+.week-dow-header .wd-name{color:var(--text-dim);text-transform:uppercase;font-size:9px;}
+.week-dow-header .wd-num{font-weight:700;font-size:14px;margin-top:1px;}
+.week-dow-header.today .wd-num{color:var(--accent);}
+.week-dow-header.selected{background:rgba(201,168,76,0.12);}
+.week-allday-label{font-size:9px;color:var(--text-dim);padding:4px 4px;text-align:right;border-bottom:1px solid var(--border);}
+.week-allday-cell{
+  border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:3px;min-height:26px;
+  display:flex;flex-direction:column;gap:2px;cursor:pointer;
+}
+.week-hour-label{
+  font-size:9px;color:var(--text-dim);text-align:right;padding:2px 4px;border-bottom:1px solid var(--border);
+  position:relative;top:-6px;
+}
+.week-hour-cell{
+  border-left:1px solid var(--border);border-bottom:1px solid var(--border);min-height:44px;position:relative;cursor:pointer;
+}
+.week-hour-cell:active{background:rgba(201,168,76,0.08);}
+.week-event{
+  position:absolute;left:2px;right:2px;border-radius:5px;padding:2px 4px;font-size:9.5px;font-weight:600;
+  overflow:hidden;line-height:1.2;cursor:pointer;color:#0c0c0f;z-index:1;
+}
+.week-event.ev-tarea{background:var(--tarea);}
+.week-event.ev-frio{background:var(--frio);}
+.week-event.ev-caliente{background:var(--caliente);}
+.week-event.ev-cerrado{background:var(--cerrado);}
+.week-event.ev-perdido{background:var(--perdido);}
+.week-event.ev-contactado{background:#9a9aa5;}
+.week-mini-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:3px;flex-shrink:0;}
+.week-allday-chip{
+  font-size:9px;font-weight:600;padding:1px 4px;border-radius:4px;color:#0c0c0f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* CONTACT CARD */
+.contact-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px;margin-bottom:10px;cursor:pointer;
+}
+.contact-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.contact-company{font-weight:600;font-size:15px;}
+.contact-name{font-size:12px;color:var(--text-dim);margin-top:1px;}
+.semaforo{
+  font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.3px;white-space:nowrap;flex-shrink:0;
+}
+.sem-frio{background:rgba(91,143,214,0.18);color:var(--frio);}
+.sem-caliente{background:rgba(232,118,61,0.18);color:var(--caliente);}
+.sem-cerrado{background:rgba(76,175,110,0.18);color:var(--cerrado);}
+.sem-perdido{background:rgba(232,154,61,0.18);color:var(--perdido);}
+.sem-contactado{background:rgba(154,154,165,0.18);color:var(--text-dim);}
+.contact-meta{display:flex;gap:12px;margin-top:8px;font-size:11px;color:var(--text-dim);flex-wrap:wrap;}
+.imp-badge{font-size:9px;padding:2px 7px;border-radius:6px;font-weight:700;text-transform:uppercase;}
+.imp-alta{background:rgba(232,118,61,0.15);color:var(--caliente);}
+.imp-media{background:rgba(201,168,76,0.15);color:var(--accent);}
+.imp-baja{background:rgba(154,154,165,0.15);color:var(--text-dim);}
+
+/* FAB */
+.fab-group{
+  position:fixed;bottom:24px;right:20px;display:flex;flex-direction:column;align-items:center;gap:12px;z-index:60;
+}
+.fab{
+  width:56px;height:56px;border-radius:50%;
+  background:var(--accent);color:#1a1a1a;font-size:26px;border:none;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.4);
+}
+.fab-mini{
+  width:44px;height:44px;font-size:18px;font-weight:700;
+  background:var(--cerrado);color:#0c0c0f;
+}
+
+/* MODAL */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:none;
+  align-items:flex-end;justify-content:center;
+}
+.modal-overlay.show{display:flex;}
+.modal{
+  background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:600px;
+  max-height:88vh;overflow-y:auto;padding:20px 18px 30px;
+  animation:slideUp 0.25s ease;
+}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal h2{font-size:18px;margin-bottom:16px;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:5px;}
+.field input,.field select,.field textarea{
+  width:100%;background:var(--card2);border:1px solid var(--border);border-radius:10px;
+  padding:11px 12px;color:var(--text);font-size:14px;font-family:inherit;
+}
+.field textarea{resize:vertical;min-height:60px;}
+.field-row{display:flex;gap:10px;}
+.field-row .field{flex:1;}
+.modal-actions{display:flex;gap:10px;margin-top:18px;}
+.btn{
+  flex:1;padding:13px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;
+}
+.btn-primary{background:var(--accent);color:#1a1a1a;}
+.btn-secondary{background:var(--card2);color:var(--text);border:1px solid var(--border);}
+.btn-danger{background:rgba(232,118,61,0.15);color:var(--caliente);border:1px solid var(--caliente);}
+
+.state-picker{display:flex;gap:6px;flex-wrap:wrap;}
+.state-opt{
+  flex:1;min-width:75px;text-align:center;padding:9px 6px;border-radius:10px;font-size:11px;font-weight:700;
+  text-transform:uppercase;cursor:pointer;border:2px solid transparent;background:var(--card2);color:var(--text-dim);
+}
+.state-opt.sel-frio.active{border-color:var(--frio);color:var(--frio);background:rgba(91,143,214,0.12);}
+.state-opt.sel-caliente.active{border-color:var(--caliente);color:var(--caliente);background:rgba(232,118,61,0.12);}
+.state-opt.sel-cerrado.active{border-color:var(--cerrado);color:var(--cerrado);background:rgba(76,175,110,0.12);}
+.state-opt.sel-perdido.active{border-color:var(--perdido);color:var(--perdido);background:rgba(232,154,61,0.12);}
+.state-opt.sel-contactado.active{border-color:var(--text-dim);color:var(--text);background:rgba(154,154,165,0.12);}
+
+.scale-opt.sel-alta.active{border-color:var(--caliente);color:var(--caliente);background:rgba(232,118,61,0.12);}
+.scale-opt.sel-media.active{border-color:var(--accent);color:var(--accent);background:rgba(201,168,76,0.12);}
+.scale-opt.sel-baja.active{border-color:var(--text-dim);color:var(--text);background:rgba(154,154,165,0.12);}
+.scale-picker{display:flex;gap:6px;}
+.scale-opt{
+  flex:1;text-align:center;padding:8px 4px;border-radius:9px;font-size:11px;font-weight:700;
+  text-transform:uppercase;cursor:pointer;border:2px solid transparent;background:var(--card2);color:var(--text-dim);
+}
+
+/* REPORTS */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;}
+.stat-num{font-size:26px;font-weight:700;}
+.stat-label{font-size:11px;color:var(--text-dim);margin-top:2px;}
+.bar-row{margin-bottom:10px;}
+.bar-row-top{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;}
+.bar-bg{height:8px;background:var(--card2);border-radius:6px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:6px;}
+.section-title{font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin:20px 0 10px;font-weight:600;}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-dim);font-size:13px;}
+
+/* MATRIZ IMPORTANCIA/FACILIDAD */
+.matrix-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;}
+.matrix-cell{
+  background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;
+}
+.matrix-cell .mc-num{font-size:18px;font-weight:700;}
+.matrix-cell .mc-label{font-size:9px;color:var(--text-dim);text-transform:uppercase;margin-top:2px;}
+.matrix-axis-label{font-size:10px;color:var(--text-dim);text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;}
+
+/* TYPE TOGGLE (lead vs tarea) en modal */
+.type-toggle{display:flex;gap:6px;margin-bottom:16px;background:var(--card2);padding:4px;border-radius:10px;}
+.type-opt{flex:1;text-align:center;padding:9px 0;border-radius:8px;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;}
+.type-opt.active{background:var(--accent);color:#1a1a1a;}
+
+.export-btn{
+  width:100%;padding:13px;background:var(--card);border:1px solid var(--accent-dim);border-radius:10px;
+  color:var(--accent);font-weight:600;font-size:14px;margin-top:6px;
+}
+
+input::placeholder,textarea::placeholder{color:#5a5a65;}
+select{appearance:none;-webkit-appearance:none;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Donna<span>.</span></h1>
+  <div class="sub" id="headerSub">tu asistente comercial</div>
+  <div class="sub" id="syncIndicator" style="font-size:10px;margin-top:2px">☁ conectando…</div>
+</header>
+
+<div class="container" id="mainContainer">
+  <div class="banner" id="banner"></div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="calendario">Calendario</div>
+    <div class="tab" data-tab="contactos">Contactos</div>
+    <div class="tab" data-tab="informes">Informes</div>
+  </div>
+
+  <div id="view-calendario"></div>
+  <div id="view-contactos" style="display:none"></div>
+  <div id="view-informes" style="display:none"></div>
+</div>
+
+<div class="fab-group">
+  <button class="fab fab-mini" id="fabPresupuesto" title="Nuevo presupuesto">$</button>
+  <button class="fab" id="fabAdd" title="Nuevo prospecto">+</button>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+// ---------- STORAGE (sincronizado en la nube vía Netlify Function) ----------
+const API_URL = '/.netlify/functions/data';
+const LOCAL_CACHE_KEY = 'donna_cache_v1';
+
+// Cache local para que la app cargue al toque mientras se sincroniza con el servidor
+let _cache = JSON.parse(localStorage.getItem(LOCAL_CACHE_KEY) || 'null') || {contacts:[], simpleTasks:[], dismissed:{}};
+let contacts = _cache.contacts || [];
+let simpleTasks = _cache.simpleTasks || [];
+let dismissed = _cache.dismissed || {};
+
+let syncTimer = null;
+let isSyncing = false;
+let lastSyncOk = true;
+
+function persistLocalCache(){
+  localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify({contacts, simpleTasks, dismissed}));
+}
+
+async function pushToServer(){
+  try{
+    const res = await fetch(API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({contacts, simpleTasks, dismissed})
+    });
+    lastSyncOk = res.ok;
+    updateSyncIndicator();
+  } catch(e){
+    lastSyncOk = false;
+    updateSyncIndicator();
+  }
+}
+
+function queueSync(){
+  persistLocalCache();
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(pushToServer, 600); // debounce: agrupa cambios rápidos
+}
+
+async function pullFromServer(silent){
+  if(isSyncing) return;
+  isSyncing = true;
+  try{
+    const res = await fetch(API_URL);
+    if(res.ok){
+      const data = await res.json();
+      contacts = data.contacts || [];
+      simpleTasks = data.simpleTasks || [];
+      dismissed = data.dismissed || {};
+      persistLocalCache();
+      lastSyncOk = true;
+      if(!silent) render(); else softRefresh();
+    } else {
+      lastSyncOk = false;
+    }
+  } catch(e){
+    lastSyncOk = false;
+  }
+  isSyncing = false;
+  updateSyncIndicator();
+}
+
+function softRefresh(){
+  // Refresca vistas sin perder el modal abierto, para no interrumpir si estás editando algo
+  const modalOpen = document.getElementById('modalOverlay').classList.contains('show');
+  if(!modalOpen) render();
+}
+
+function updateSyncIndicator(){
+  const el = document.getElementById('syncIndicator');
+  if(!el) return;
+  el.textContent = lastSyncOk ? '☁ sincronizado' : '⚠ sin conexión, guardado local';
+  el.style.color = lastSyncOk ? 'var(--text-dim)' : 'var(--caliente)';
+}
+
+function save(){
+  queueSync();
+  render();
+}
+function saveTasks(){
+  queueSync();
+  render();
+}
+function saveDismissed(){
+  queueSync();
+}
+
+function uid(){ return 'c' + Date.now() + Math.random().toString(36).slice(2,7); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function tomorrowStr(){
+  const d = new Date(); d.setDate(d.getDate()+1);
+  return d.toISOString().slice(0,10);
+}
+function fmtDate(d){
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});
+}
+function daysBetween(d1,d2){
+  return Math.floor((new Date(d2)-new Date(d1))/86400000);
+}
+// Suma N días hábiles desde una fecha de referencia, empujando fines de semana al lunes
+function addBusinessAwareDays(dateStr, days){
+  const d = new Date(dateStr+'T00:00:00');
+  d.setDate(d.getDate() + days);
+  const dow = d.getDay(); // 0=domingo, 6=sábado
+  if(dow === 0) d.setDate(d.getDate()+1); // domingo -> lunes
+  if(dow === 6) d.setDate(d.getDate()+2); // sábado -> lunes
+  return d.toISOString().slice(0,10);
+}
+// Calcula la fecha del próximo seguimiento según la etapa del contacto
+function getSeguimientoTarget(c){
+  if(!c.fecha) return null;
+  if(c.estado === 'cerrado' || c.estado === 'perdido') return null;
+  if(c.cotizado){
+    // cotizado: recordar a los 5 días desde la fecha de cotización (o fecha de contacto si no hay)
+    const base = c.fechaCotizacion || c.fecha;
+    return addBusinessAwareDays(base, 5);
+  }
+  // primer contacto: recordar a los 15 días
+  return addBusinessAwareDays(c.fecha, 15);
+}
+
+// ---------- STATE CONFIG ----------
+const STATES = {
+  contactado: {label:'Contactado', class:'contactado'},
+  frio: {label:'Frío', class:'frio'},
+  caliente: {label:'Caliente', class:'caliente'},
+  cerrado: {label:'Cerrado', class:'cerrado'},
+  perdido: {label:'Perdido', class:'perdido'}
+};
+const SCALE_LABELS = {alta:'Alta', media:'Media', baja:'Baja'};
+const SCALE_SCORE = {alta:3, media:2, baja:1};
+
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let selectedDate = todayStr();
+let activeTab = 'calendario';
+let editingId = null;
+let calView = 'semana'; // 'semana' | 'mes'
+let weekRefDate = todayStr(); // cualquier día dentro de la semana mostrada
+
+const WEEK_START_HOUR = 8;
+const WEEK_END_HOUR = 20;
+
+function getMonday(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const dow = d.getDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate()+diff);
+  return d;
+}
+function addDays(dateStr, n){
+  const d = new Date(dateStr+'T00:00:00');
+  d.setDate(d.getDate()+n);
+  return d.toISOString().slice(0,10);
+}
+
+// ---------- BANNER (daily tasks) ----------
+function getTasksForDate(dateStr){
+  const tasks = [];
+  contacts.forEach(c=>{
+    const target = getSeguimientoTarget(c);
+    if(target === dateStr){
+      const key = c.id+'_seguimiento_'+dateStr;
+      if(!dismissed[key]){
+        const motivo = c.cotizado ? 'Le cotizaste, es momento de retomar contacto' : 'Primer contacto hace tiempo, volvé a escribirle';
+        tasks.push({key, type:'seguimiento', contact:c, text:motivo});
+      }
+    }
+    // Postventa: 21 días después del cierre
+    if(c.estado === 'cerrado' && c.fechaCierre){
+      const postventaDate = addBusinessAwareDays(c.fechaCierre, 21);
+      if(postventaDate === dateStr){
+        const key = c.id+'_postventa_'+dateStr;
+        if(!dismissed[key]){
+          tasks.push({key, type:'postventa', contact:c, text:'¿Cómo viene con lo que cerraste? Buen momento para un postventa'});
+        }
+      }
+    }
+  });
+  simpleTasks.forEach(t=>{
+    if(t.fecha === dateStr && !t.done){
+      tasks.push({key:'tarea_'+t.id, type:'tarea', taskObj:t, text:t.texto});
+    }
+  });
+  return tasks;
+}
+
+function renderBanner(){
+  const today = todayStr();
+  const tomorrow = tomorrowStr();
+  const todayTasks = getTasksForDate(today);
+  const tomorrowTasks = getTasksForDate(tomorrow);
+  const banner = document.getElementById('banner');
+
+  function taskHtml(t, isTomorrow){
+    const tagClass = t.type === 'seguimiento' ? 'tag-seguimiento' : t.type === 'postventa' ? 'tag-postventa' : 'tag-tarea';
+    const tagLabel = t.type === 'seguimiento' ? 'Seguimiento' : t.type === 'postventa' ? 'Postventa' : 'Tarea';
+    if(t.type === 'tarea'){
+      return `<div class="task-item ${isTomorrow?'is-tomorrow':''}">
+        <div class="task-info">
+          <div class="task-name">${esc(t.taskObj.texto)}</div>
+          <span class="task-tag ${tagClass}">${tagLabel}</span>
+        </div>
+        <div class="task-actions">
+          <button class="btn-icon" onclick="completeSimpleTask('${t.taskObj.id}')">✓</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="task-item ${isTomorrow?'is-tomorrow':''}">
+      <div class="task-info">
+        <div class="task-name">${esc(t.contact.empresa||t.contact.nombre)}${t.contact.empresa? ' · '+esc(t.contact.nombre):''}</div>
+        <div class="task-detail">${esc(t.text)}</div>
+        <span class="task-tag ${tagClass}">${tagLabel}</span>
+      </div>
+      <div class="task-actions">
+        <button class="btn-icon" onclick="openContact('${t.contact.id}')">✎</button>
+        <button class="btn-icon" onclick="dismissTask('${t.key}')">✓</button>
+      </div>
+    </div>`;
+  }
+
+  let html = '<div class="banner-title">Para hoy</div>';
+  if(todayTasks.length === 0){
+    html += '<div class="banner-empty">Nada pendiente por ahora. Buen momento para prospectar 👀</div>';
+  } else {
+    html += todayTasks.map(t=>taskHtml(t,false)).join('');
+  }
+
+  if(tomorrowTasks.length > 0){
+    html += '<div class="banner-subtitle">Mañana ('+fmtDate(tomorrow)+')</div>';
+    html += tomorrowTasks.map(t=>taskHtml(t,true)).join('');
+  }
+
+  banner.innerHTML = html;
+}
+
+function dismissTask(key){
+  dismissed[key] = true;
+  saveDismissed();
+  renderBanner();
+}
+
+function completeSimpleTask(id){
+  const t = simpleTasks.find(x=>x.id===id);
+  if(t){ t.done = true; saveTasks(); }
+}
+
+// ---------- CALENDAR ----------
+function renderCalendar(){
+  const view = document.getElementById('view-calendario');
+  const toggleHtml = `
+    <div class="view-toggle">
+      <div class="view-opt ${calView==='semana'?'active':''}" onclick="setCalView('semana')">Semana</div>
+      <div class="view-opt ${calView==='mes'?'active':''}" onclick="setCalView('mes')">Mes</div>
+    </div>
+  `;
+  view.innerHTML = toggleHtml + `<div id="calBody"></div>` + `
+    <div class="day-list">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 id="dayListTitle">${fmtDate(selectedDate)}</h3>
+        <button class="btn-icon" onclick="openTaskModal('${selectedDate}')" title="Agregar tarea simple">📝</button>
+      </div>
+      <div id="dayContactsList"></div>
+    </div>
+  `;
+  if(calView === 'mes') renderMonthView(); else renderWeekView();
+  renderDayList();
+}
+
+function setCalView(v){
+  calView = v;
+  if(v === 'semana') weekRefDate = selectedDate;
+  renderCalendar();
+}
+
+function getEventsForDate(dateStr){
+  const evs = [];
+  contacts.forEach(c=>{
+    if(c.fecha === dateStr){
+      evs.push({kind:'contact', estado:c.estado||'contactado', label:(c.empresa||c.nombre), hora:null, ref:c});
+    }
+  });
+  simpleTasks.forEach(t=>{
+    if(t.fecha === dateStr){
+      evs.push({kind:'tarea', estado:'tarea', label:t.texto, hora:t.hora||null, ref:t});
+    }
+  });
+  return evs;
+}
+
+// ---------- MONTH VIEW ----------
+function renderMonthView(){
+  const body = document.getElementById('calBody');
+  const monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const dows = ['L','M','M','J','V','S','D'];
+
+  const firstDay = new Date(currentYear, currentMonth, 1);
+  let startOffset = firstDay.getDay() - 1;
+  if(startOffset < 0) startOffset = 6;
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+
+  let grid = dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<startOffset;i++) grid += '<div class="cal-day empty"></div>';
+
+  for(let day=1; day<=daysInMonth; day++){
+    const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isToday = dateStr === todayStr();
+    const isSel = dateStr === selectedDate;
+    const evs = getEventsForDate(dateStr);
+    const seenStates = new Set(evs.map(e=> e.kind==='tarea' ? 'tarea' : e.estado));
+    let dots = '';
+    seenStates.forEach(s=>{
+      dots += `<span class="dot" style="background:var(--${s})"></span>`;
+    });
+    grid += `<div class="cal-day ${isToday?'today':''} ${isSel?'selected':''}" onclick="goToDay('${dateStr}')">
+      ${day}
+      <div class="dots">${dots}</div>
+    </div>`;
+  }
+
+  body.innerHTML = `
+    <div class="cal-header">
+      <h2>${monthNames[currentMonth]} ${currentYear}</h2>
+      <div class="cal-nav">
+        <button class="btn-icon" onclick="changeMonth(-1)">‹</button>
+        <button class="btn-icon" onclick="changeMonth(1)">›</button>
+      </div>
+    </div>
+    <div class="cal-grid">${grid}</div>
+  `;
+}
+
+function goToDay(dateStr){
+  selectedDate = dateStr;
+  weekRefDate = dateStr;
+  const d = new Date(dateStr+'T00:00:00');
+  currentMonth = d.getMonth();
+  currentYear = d.getFullYear();
+  renderCalendar();
+}
+
+function changeMonth(delta){
+  currentMonth += delta;
+  if(currentMonth < 0){ currentMonth = 11; currentYear--; }
+  if(currentMonth > 11){ currentMonth = 0; currentYear++; }
+  renderMonthView();
+}
+
+// ---------- WEEK VIEW (agenda) ----------
+function renderWeekView(){
+  const body = document.getElementById('calBody');
+  const monday = getMonday(weekRefDate);
+  const dayLabels = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const monthNames = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+  const weekDates = [];
+  for(let i=0;i<7;i++){
+    const d = new Date(monday);
+    d.setDate(d.getDate()+i);
+    weekDates.push(d.toISOString().slice(0,10));
+  }
+
+  // header label range
+  const first = new Date(weekDates[0]+'T00:00:00');
+  const last = new Date(weekDates[6]+'T00:00:00');
+  const rangeLabel = `${first.getDate()} ${monthNames[first.getMonth()]} – ${last.getDate()} ${monthNames[last.getMonth()]} ${last.getFullYear()}`;
+
+  // header row
+  let headerCells = '<div class="week-corner"></div>';
+  weekDates.forEach((ds,i)=>{
+    const d = new Date(ds+'T00:00:00');
+    const isToday = ds === todayStr();
+    const isSel = ds === selectedDate;
+    headerCells += `<div class="week-dow-header ${isToday?'today':''} ${isSel?'selected':''}" onclick="goToDay('${ds}')">
+      <div class="wd-name">${dayLabels[i]}</div>
+      <div class="wd-num">${d.getDate()}</div>
+    </div>`;
+  });
+
+  // all-day row (eventos sin hora)
+  let alldayCells = '<div class="week-allday-label">todo<br>el día</div>';
+  weekDates.forEach(ds=>{
+    const evs = getEventsForDate(ds).filter(e=> !e.hora);
+    let chips = '';
+    evs.slice(0,3).forEach(e=>{
+      const cls = e.kind==='tarea' ? 'ev-tarea' : 'ev-'+e.estado;
+      chips += `<div class="week-allday-chip ${cls}" onclick="event.stopPropagation();${e.kind==='tarea'?`editSimpleTask('${e.ref.id}')`:`openContact('${e.ref.id}')`}">${esc(e.label)}</div>`;
+    });
+    if(evs.length > 3) chips += `<div class="week-allday-chip" style="background:var(--card2);color:var(--text-dim)">+${evs.length-3}</div>`;
+    alldayCells += `<div class="week-allday-cell" onclick="goToDay('${ds}')">${chips}</div>`;
+  });
+
+  // hour rows
+  let hourRows = '';
+  for(let h=WEEK_START_HOUR; h<WEEK_END_HOUR; h++){
+    hourRows += `<div class="week-hour-label">${String(h).padStart(2,'0')}:00</div>`;
+    weekDates.forEach(ds=>{
+      hourRows += `<div class="week-hour-cell" data-date="${ds}" data-hour="${h}" onclick="handleHourCellClick('${ds}',${h})"></div>`;
+    });
+  }
+
+  body.innerHTML = `
+    <div class="cal-header">
+      <h2 style="font-size:14px;text-transform:none">${rangeLabel}</h2>
+      <div class="cal-nav">
+        <button class="btn-icon" onclick="changeWeek(-1)">‹</button>
+        <button class="btn-icon" onclick="goToDay('${todayStr()}')" style="width:auto;padding:0 10px;font-size:11px">Hoy</button>
+        <button class="btn-icon" onclick="changeWeek(1)">›</button>
+      </div>
+    </div>
+    <div class="week-wrap">
+      <div class="week-grid">
+        ${headerCells}
+        ${alldayCells}
+        ${hourRows}
+      </div>
+    </div>
+  `;
+
+  // posicionar eventos con hora, absolutos sobre las celdas
+  weekDates.forEach(ds=>{
+    const evs = getEventsForDate(ds).filter(e=> e.hora);
+    evs.forEach(e=>{
+      const [hh,mm] = e.hora.split(':').map(Number);
+      if(hh < WEEK_START_HOUR || hh >= WEEK_END_HOUR) return;
+      const cell = body.querySelector(`.week-hour-cell[data-date="${ds}"][data-hour="${hh}"]`);
+      if(!cell) return;
+      const topPct = (mm/60)*100;
+      const cls = e.kind==='tarea' ? 'ev-tarea' : 'ev-'+e.estado;
+      const evEl = document.createElement('div');
+      evEl.className = `week-event ${cls}`;
+      evEl.style.top = topPct+'%';
+      evEl.style.height = '38px';
+      evEl.textContent = (e.hora?e.hora+' ':'') + e.label;
+      evEl.onclick = (ev)=>{ ev.stopPropagation(); e.kind==='tarea' ? editSimpleTask(e.ref.id) : openContact(e.ref.id); };
+      cell.style.position = 'relative';
+      cell.appendChild(evEl);
+    });
+  });
+}
+
+function handleHourCellClick(dateStr, hour){
+  selectedDate = dateStr;
+  openTaskModal(dateStr, `${String(hour).padStart(2,'0')}:00`);
+}
+
+function changeWeek(delta){
+  weekRefDate = addDays(getMonday(weekRefDate).toISOString().slice(0,10), delta*7);
+  renderWeekView();
+}
+
+
+
+function renderDayList(){
+  const list = (contacts.filter(c=>c.fecha === selectedDate));
+  const dayTasks = [...simpleTasks.filter(t=>t.fecha === selectedDate)].sort((a,b)=>(a.hora||'99:99').localeCompare(b.hora||'99:99'));
+  const el = document.getElementById('dayContactsList');
+  if(!el) return;
+  let html = '';
+  if(dayTasks.length > 0){
+    html += dayTasks.map(t=>`
+      <div class="task-item">
+        <div class="task-info" onclick="editSimpleTask('${t.id}')" style="cursor:pointer">
+          <div class="task-name" style="${t.done?'text-decoration:line-through;color:var(--text-dim)':''}">${t.hora?'<span style="color:var(--tarea)">'+t.hora+'</span> · ':''}${esc(t.texto)}</div>
+          <span class="task-tag tag-tarea">Tarea</span>
+        </div>
+        <div class="task-actions">
+          <button class="btn-icon" onclick="toggleSimpleTask('${t.id}')">${t.done?'↺':'✓'}</button>
+          <button class="btn-icon" onclick="deleteSimpleTask('${t.id}')">🗑</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  if(list.length === 0 && dayTasks.length === 0){
+    html = '<div class="empty-state">Sin contactos ni tareas este día</div>';
+  } else {
+    html += list.map(c=>contactCardHtml(c)).join('');
+  }
+  el.innerHTML = html;
+}
+
+// ---------- SIMPLE TASKS ----------
+function toggleSimpleTask(id){
+  const t = simpleTasks.find(x=>x.id===id);
+  if(t){ t.done = !t.done; saveTasks(); renderCalendar(); }
+}
+function deleteSimpleTask(id){
+  simpleTasks = simpleTasks.filter(x=>x.id!==id);
+  saveTasks();
+  closeModal();
+  renderCalendar();
+}
+function editSimpleTask(id){
+  const t = simpleTasks.find(x=>x.id===id);
+  if(t) openTaskModal(t.fecha, t.hora, t.id);
+}
+function openTaskModal(dateStr, hora, taskId){
+  const editing = taskId ? simpleTasks.find(x=>x.id===taskId) : null;
+  document.getElementById('modalContent').innerHTML = `
+    <h2>${editing? 'Editar tarea' : 'Nueva tarea'}</h2>
+    <div class="field">
+      <label>¿Qué tenés que hacer?</label>
+      <input id="t_texto" value="${esc(editing?.texto||'')}" placeholder="Llamar al gomero, pagar factura, etc.">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Fecha</label>
+        <input id="t_fecha" type="date" value="${editing?.fecha || dateStr}">
+      </div>
+      <div class="field">
+        <label>Hora (opcional)</label>
+        <input id="t_hora" type="time" value="${editing?.hora || hora || ''}">
+      </div>
+    </div>
+    <div class="modal-actions">
+      ${editing? '<button class="btn btn-danger" onclick="deleteSimpleTask(\''+editing.id+'\')">Eliminar</button>':''}
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSimpleTask('${taskId||''}')">Guardar</button>
+    </div>
+  `;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function saveSimpleTask(taskId){
+  const texto = document.getElementById('t_texto').value.trim();
+  if(!texto){ alert('Escribí qué hay que hacer'); return; }
+  const fecha = document.getElementById('t_fecha').value || todayStr();
+  const hora = document.getElementById('t_hora').value || null;
+  if(taskId){
+    const idx = simpleTasks.findIndex(x=>x.id===taskId);
+    if(idx>-1) simpleTasks[idx] = {...simpleTasks[idx], texto, fecha, hora};
+  } else {
+    simpleTasks.push({id:uid(), texto, fecha, hora, done:false});
+  }
+  saveTasks();
+  closeModal();
+  renderCalendar();
+}
+
+// ---------- CONTACT CARD ----------
+function contactCardHtml(c){
+  const estado = c.estado || 'contactado';
+  return `<div class="contact-card" onclick="openContact('${c.id}')">
+    <div class="contact-top">
+      <div>
+        <div class="contact-company">${esc(c.empresa||'(Sin empresa)')}</div>
+        <div class="contact-name">${esc(c.cargo?c.cargo+' · ':'')}${esc(c.nombre)}</div>
+      </div>
+      <span class="semaforo sem-${estado}">${STATES[estado].label}</span>
+    </div>
+    <div class="contact-meta">
+      ${c.zona? '<span>📍 '+esc(c.zona)+'</span>':''}
+      ${c.fecha? '<span>🗓 '+fmtDate(c.fecha)+'</span>':''}
+      ${c.celular? '<span>📱 '+esc(c.celular)+'</span>':''}
+      ${c.importancia? '<span class="imp-badge imp-'+c.importancia+'">★ '+SCALE_LABELS[c.importancia]+'</span>':''}
+      ${c.facilidad? '<span class="imp-badge imp-'+c.facilidad+'">⚡ '+SCALE_LABELS[c.facilidad]+'</span>':''}
+    </div>
+  </div>`;
+}
+
+// ---------- CONTACTOS TAB ----------
+function renderContactos(){
+  const view = document.getElementById('view-contactos');
+  const sorted = [...contacts].sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||''));
+  let html = `<button class="export-btn" onclick="exportCSV()">⬇ Exportar a CSV</button>`;
+  if(sorted.length === 0){
+    html += '<div class="empty-state">Todavía no cargaste contactos.<br>Tocá el + para agregar el primero.</div>';
+  } else {
+    html += '<div style="margin-top:14px">' + sorted.map(c=>contactCardHtml(c)).join('') + '</div>';
+  }
+  view.innerHTML = html;
+}
+
+function exportCSV(){
+  const headers = ['Empresa','Nombre','Cargo','Email','Celular','Zona','Estado','Cotizado','Importancia','Facilidad','Fecha contacto','Fecha cotización','Fecha cierre','Notas'];
+  const rows = contacts.map(c=>[
+    c.empresa,c.nombre,c.cargo,c.email,c.celular,c.zona,STATES[c.estado||'contactado'].label,
+    c.cotizado?'Sí':'No', SCALE_LABELS[c.importancia]||'', SCALE_LABELS[c.facilidad]||'',
+    c.fecha,c.fechaCotizacion||'',c.fechaCierre||'',c.notas||''
+  ]);
+  let csv = headers.join(',') + '\n';
+  rows.forEach(r=>{
+    csv += r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',') + '\n';
+  });
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'donna_contactos_'+todayStr()+'.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ---------- INFORMES TAB ----------
+function renderInformes(){
+  const view = document.getElementById('view-informes');
+  const total = contacts.length;
+  const counts = {contactado:0,frio:0,caliente:0,cerrado:0,perdido:0};
+  contacts.forEach(c=> counts[c.estado||'contactado']++ );
+
+  const cerrados = counts.cerrado;
+  const tasaCierre = total? Math.round((cerrados/total)*100) : 0;
+  const calienteFrioTotal = counts.caliente + counts.frio;
+  const pctCaliente = calienteFrioTotal? Math.round((counts.caliente/calienteFrioTotal)*100) : 0;
+  const pctFrio = calienteFrioTotal? 100 - pctCaliente : 0;
+
+  // zonas
+  const zonaMap = {};
+  contacts.forEach(c=>{
+    const z = (c.zona||'Sin zona').trim() || 'Sin zona';
+    zonaMap[z] = zonaMap[z] || {total:0,cerrados:0};
+    zonaMap[z].total++;
+    if(c.estado === 'cerrado') zonaMap[z].cerrados++;
+  });
+  const zonas = Object.entries(zonaMap).sort((a,b)=>b[1].total-a[1].total);
+
+  let html = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Contactos totales</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--cerrado)">${cerrados}</div><div class="stat-label">Cerrados (${tasaCierre}%)</div></div>
+    </div>
+
+    <div class="section-title">Estado de la cartera</div>
+    ${barRow('Contactado', counts.contactado, total, 'var(--text-dim)')}
+    ${barRow('Frío', counts.frio, total, 'var(--frio)')}
+    ${barRow('Caliente', counts.caliente, total, 'var(--caliente)')}
+    ${barRow('Cerrado', counts.cerrado, total, 'var(--cerrado)')}
+    ${barRow('Perdido', counts.perdido, total, 'var(--perdido)')}
+
+    <div class="section-title">Caliente vs. Frío</div>
+    ${calienteFrioTotal? `
+      ${barRow('Caliente', counts.caliente, calienteFrioTotal, 'var(--caliente)', pctCaliente)}
+      ${barRow('Frío', counts.frio, calienteFrioTotal, 'var(--frio)', pctFrio)}
+    ` : '<div class="empty-state">Todavía no hay leads en caliente o frío</div>'}
+
+    <div class="section-title">Por zona</div>
+  `;
+
+  if(zonas.length === 0){
+    html += '<div class="empty-state">Cargá la zona en tus contactos para ver este informe</div>';
+  } else {
+    zonas.forEach(([zona,data])=>{
+      const pct = total? Math.round((data.total/total)*100):0;
+      html += barRow(zona+' ('+data.cerrados+' cerrados)', data.total, total, 'var(--accent)', pct);
+    });
+  }
+
+  // Matriz Importancia x Facilidad (solo leads activos, no cerrados/perdidos)
+  const activos = contacts.filter(c=> c.importancia && c.facilidad && !['cerrado','perdido'].includes(c.estado));
+  html += '<div class="section-title">Matriz importancia × facilidad</div>';
+  if(activos.length === 0){
+    html += '<div class="empty-state">Cargá Importancia y Facilidad en tus contactos para ver esta matriz</div>';
+  } else {
+    const levels = ['alta','media','baja'];
+    html += '<div class="matrix-axis-label">Facilidad → (filas) · Importancia → (columnas)</div>';
+    html += '<div class="matrix-grid" style="grid-template-columns:60px 1fr 1fr 1fr"><div></div>';
+    levels.forEach(l=> html += `<div class="matrix-axis-label" style="margin:0">${SCALE_LABELS[l]}</div>`);
+    html += '</div>';
+    levels.forEach(fil=>{
+      html += `<div class="matrix-grid" style="grid-template-columns:60px 1fr 1fr 1fr">
+        <div class="matrix-axis-label" style="margin:0;text-align:right;padding-right:6px">${SCALE_LABELS[fil]}</div>`;
+      levels.forEach(imp=>{
+        const n = activos.filter(c=>c.importancia===imp && c.facilidad===fil).length;
+        const isPriority = imp==='alta' && fil==='alta';
+        html += `<div class="matrix-cell" style="${isPriority?'border-color:var(--caliente)':''}">
+          <div class="mc-num" style="${isPriority?'color:var(--caliente)':''}">${n}</div>
+        </div>`;
+      });
+      html += '</div>';
+    });
+    const quickWins = activos.filter(c=>c.importancia==='alta' && c.facilidad==='alta').length;
+    if(quickWins > 0){
+      html += `<div style="margin-top:8px;font-size:12px;color:var(--caliente)">🎯 Tenés ${quickWins} lead${quickWins===1?'':'s'} de alta importancia y alta facilidad — atacalos primero.</div>`;
+    }
+  }
+
+  view.innerHTML = html;
+}
+
+function barRow(label, value, max, color, customPct){
+  const pct = customPct !== undefined ? customPct : (max? Math.round((value/max)*100):0);
+  return `<div class="bar-row">
+    <div class="bar-row-top"><span>${esc(label)}</span><span style="color:${color}">${value} · ${pct}%</span></div>
+    <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
+  </div>`;
+}
+
+// ---------- MODAL: ADD/EDIT CONTACT ----------
+// ---------- PRESUPUESTO RÁPIDO ----------
+function openPresupuestoModal(){
+  const activos = [...contacts].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  document.getElementById('modalContent').innerHTML = `
+    <h2>Nuevo presupuesto</h2>
+    <div class="field">
+      <label>Cliente</label>
+      <select id="p_existente">
+        <option value="">— Cliente nuevo —</option>
+        ${activos.map(c=>`<option value="${c.id}">${esc(c.empresa||'(Sin empresa)')} · ${esc(c.nombre)}</option>`).join('')}
+      </select>
+    </div>
+    <div id="p_nuevoFields">
+      <div class="field-row">
+        <div class="field">
+          <label>Empresa</label>
+          <input id="p_empresa" placeholder="Láctea SA">
+        </div>
+        <div class="field">
+          <label>Nombre</label>
+          <input id="p_nombre" placeholder="Juan Pérez">
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>¿Qué le cotizaste?</label>
+      <textarea id="p_detalle" placeholder="3 termómetros TFA + calibración anual, etc."></textarea>
+    </div>
+    <div class="field">
+      <label>Fecha de cotización</label>
+      <input id="p_fecha" type="date" value="${todayStr()}">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePresupuesto()">Guardar</button>
+    </div>
+  `;
+  document.getElementById('p_existente').onchange = (e)=>{
+    document.getElementById('p_nuevoFields').style.display = e.target.value ? 'none' : 'block';
+  };
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function savePresupuesto(){
+  const existenteId = document.getElementById('p_existente').value;
+  const detalle = document.getElementById('p_detalle').value.trim();
+  const fecha = document.getElementById('p_fecha').value || todayStr();
+  if(!detalle){ alert('Contame brevemente qué cotizaste'); return; }
+
+  if(existenteId){
+    const idx = contacts.findIndex(x=>x.id===existenteId);
+    if(idx>-1){
+      const prev = contacts[idx].notas || '';
+      contacts[idx] = {
+        ...contacts[idx],
+        cotizado: true,
+        fechaCotizacion: fecha,
+        estado: contacts[idx].estado === 'cerrado' ? contacts[idx].estado : 'caliente',
+        notas: (prev ? prev+'\n' : '') + '📋 Cotizado ('+fmtDate(fecha)+'): '+detalle
+      };
+    }
+  } else {
+    const empresa = document.getElementById('p_empresa').value.trim();
+    const nombre = document.getElementById('p_nombre').value.trim();
+    if(!nombre){ alert('Falta el nombre del cliente'); return; }
+    contacts.push({
+      id: uid(), nombre, empresa, cargo:'', email:'', celular:'', zona:'',
+      fecha, estado:'caliente', fechaCierre:null,
+      cotizado:true, fechaCotizacion:fecha,
+      importancia:null, facilidad:null,
+      notas:'📋 Cotizado ('+fmtDate(fecha)+'): '+detalle
+    });
+  }
+  save();
+  closeModal();
+}
+
+function openContact(id){
+  editingId = id || null;
+  const c = id ? contacts.find(x=>x.id===id) : {};
+  const estado = c.estado || 'contactado';
+  const cotizado = !!c.cotizado;
+
+  document.getElementById('modalContent').innerHTML = `
+    <h2>${id? 'Editar contacto' : 'Nuevo contacto'}</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>Empresa</label>
+        <input id="f_empresa" value="${esc(c.empresa||'')}" placeholder="Láctea SA">
+      </div>
+      <div class="field">
+        <label>Cargo</label>
+        <input id="f_cargo" value="${esc(c.cargo||'')}" placeholder="Jefe de Calidad">
+      </div>
+    </div>
+    <div class="field">
+      <label>Nombre y apellido</label>
+      <input id="f_nombre" value="${esc(c.nombre||'')}" placeholder="Juan Pérez">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Email</label>
+        <input id="f_email" value="${esc(c.email||'')}" placeholder="juan@empresa.com">
+      </div>
+      <div class="field">
+        <label>Celular</label>
+        <input id="f_celular" value="${esc(c.celular||'')}" placeholder="3492-...">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Zona</label>
+        <input id="f_zona" value="${esc(c.zona||'')}" placeholder="Rafaela, NOA, etc.">
+      </div>
+      <div class="field">
+        <label>Fecha de contacto</label>
+        <input id="f_fecha" type="date" value="${c.fecha||todayStr()}">
+      </div>
+    </div>
+    <div class="field">
+      <label>Estado</label>
+      <div class="state-picker" id="statePicker">
+        ${Object.keys(STATES).map(k=>`<div class="state-opt sel-${k} ${k===estado?'active':''}" data-state="${k}">${STATES[k].label}</div>`).join('')}
+      </div>
+    </div>
+    <div class="field" id="fechaCierreField" style="display:${estado==='cerrado'?'block':'none'}">
+      <label>Fecha de cierre</label>
+      <input id="f_fechaCierre" type="date" value="${c.fechaCierre||todayStr()}">
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="f_cotizado" ${cotizado?'checked':''} style="width:auto">
+        ¿Ya le cotizaste? (te voy a recordar en 5 días hábiles en vez de 15)
+      </label>
+    </div>
+    <div class="field" id="fechaCotizacionField" style="display:${cotizado?'block':'none'}">
+      <label>Fecha de cotización</label>
+      <input id="f_fechaCotizacion" type="date" value="${c.fechaCotizacion||todayStr()}">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Importancia ($$ + productos)</label>
+        <div class="scale-picker" id="impPicker">
+          ${['alta','media','baja'].map(k=>`<div class="scale-opt sel-${k} ${k===(c.importancia||'')?'active':''}" data-scale="${k}">${SCALE_LABELS[k]}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Facilidad</label>
+        <div class="scale-picker" id="facPicker">
+          ${['alta','media','baja'].map(k=>`<div class="scale-opt sel-${k} ${k===(c.facilidad||'')?'active':''}" data-scale="${k}">${SCALE_LABELS[k]}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Notas</label>
+      <textarea id="f_notas" placeholder="Detalles de la conversación, próximos pasos...">${esc(c.notas||'')}</textarea>
+    </div>
+    <div class="modal-actions">
+      ${id? '<button class="btn btn-danger" onclick="deleteContact()">Eliminar</button>':''}
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveContact()">Guardar</button>
+    </div>
+  `;
+
+  document.querySelectorAll('.state-opt').forEach(opt=>{
+    opt.onclick = ()=>{
+      document.querySelectorAll('.state-opt').forEach(o=>o.classList.remove('active'));
+      opt.classList.add('active');
+      document.getElementById('fechaCierreField').style.display = opt.dataset.state === 'cerrado' ? 'block':'none';
+    };
+  });
+  document.querySelectorAll('#impPicker .scale-opt').forEach(opt=>{
+    opt.onclick = ()=>{
+      document.querySelectorAll('#impPicker .scale-opt').forEach(o=>o.classList.remove('active'));
+      opt.classList.add('active');
+    };
+  });
+  document.querySelectorAll('#facPicker .scale-opt').forEach(opt=>{
+    opt.onclick = ()=>{
+      document.querySelectorAll('#facPicker .scale-opt').forEach(o=>o.classList.remove('active'));
+      opt.classList.add('active');
+    };
+  });
+  document.getElementById('f_cotizado').onchange = (e)=>{
+    document.getElementById('fechaCotizacionField').style.display = e.target.checked ? 'block':'none';
+  };
+
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('show');
+  editingId = null;
+}
+
+function saveContact(){
+  const nombre = document.getElementById('f_nombre').value.trim();
+  if(!nombre){ alert('Falta el nombre'); return; }
+  const activeState = document.querySelector('.state-opt.active');
+  const estado = activeState ? activeState.dataset.state : 'contactado';
+
+  const data = {
+    id: editingId || uid(),
+    nombre,
+    empresa: document.getElementById('f_empresa').value.trim(),
+    cargo: document.getElementById('f_cargo').value.trim(),
+    email: document.getElementById('f_email').value.trim(),
+    celular: document.getElementById('f_celular').value.trim(),
+    zona: document.getElementById('f_zona').value.trim(),
+    fecha: document.getElementById('f_fecha').value || todayStr(),
+    estado,
+    fechaCierre: estado==='cerrado' ? (document.getElementById('f_fechaCierre').value || todayStr()) : (contacts.find(x=>x.id===editingId)?.fechaCierre || null),
+    cotizado: document.getElementById('f_cotizado').checked,
+    fechaCotizacion: document.getElementById('f_cotizado').checked ? (document.getElementById('f_fechaCotizacion').value || todayStr()) : null,
+    importancia: document.querySelector('#impPicker .scale-opt.active')?.dataset.scale || null,
+    facilidad: document.querySelector('#facPicker .scale-opt.active')?.dataset.scale || null,
+    notas: document.getElementById('f_notas').value.trim()
+  };
+
+  if(editingId){
+    const idx = contacts.findIndex(x=>x.id===editingId);
+    contacts[idx] = data;
+  } else {
+    contacts.push(data);
+  }
+  save();
+  closeModal();
+}
+
+function deleteContact(){
+  if(!confirm('¿Eliminar este contacto?')) return;
+  contacts = contacts.filter(x=>x.id!==editingId);
+  save();
+  closeModal();
+}
+
+// ---------- UTIL ----------
+function esc(s){
+  return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// ---------- TABS ----------
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.onclick = ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    activeTab = tab.dataset.tab;
+    document.getElementById('view-calendario').style.display = activeTab==='calendario' ? 'block':'none';
+    document.getElementById('view-contactos').style.display = activeTab==='contactos' ? 'block':'none';
+    document.getElementById('view-informes').style.display = activeTab==='informes' ? 'block':'none';
+    document.getElementById('mainContainer').classList.toggle('wide-cal', activeTab==='calendario');
+    render();
+  };
+});
+
+document.getElementById('fabAdd').onclick = ()=> openContact(null);
+document.getElementById('fabPresupuesto').onclick = ()=> openPresupuestoModal();
+document.getElementById('modalOverlay').onclick = (e)=>{
+  if(e.target.id === 'modalOverlay') closeModal();
+};
+document.getElementById('mainContainer').classList.toggle('wide-cal', activeTab==='calendario');
+
+// ---------- MAIN RENDER ----------
+function render(){
+  renderBanner();
+  if(activeTab==='calendario') renderCalendar();
+  if(activeTab==='contactos') renderContactos();
+  if(activeTab==='informes') renderInformes();
+  document.getElementById('headerSub').textContent = contacts.length + ' contacto' + (contacts.length===1?'':'s') + ' en cartera';
+}
+
+render(); // pinta de inmediato con el cache local (si había)
+pullFromServer(false); // y trae lo último del servidor apenas carga
+
+// Sincroniza con el servidor cada 15s, para ver cambios hechos desde otro dispositivo
+setInterval(()=> pullFromServer(true), 15000);
+
+// Si volvés a la pestaña/app después de un rato, sincroniza al toque
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') pullFromServer(true);
+});
+</script>
+</body>
+</html>
