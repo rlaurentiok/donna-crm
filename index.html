@@ -276,6 +276,13 @@ header .sub{color:var(--text-dim);font-size:12px;margin-top:2px;}
 .bar-bg{height:8px;background:var(--card2);border-radius:6px;overflow:hidden;}
 .bar-fill{height:100%;border-radius:6px;}
 .section-title{font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin:20px 0 10px;font-weight:600;}
+.date-separator{
+  display:flex;align-items:center;gap:10px;margin:22px 0 10px;
+}
+.date-separator:first-child{margin-top:14px;}
+.date-separator .ds-label{font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap;}
+.date-separator .ds-count{font-size:11px;color:var(--text-dim);background:var(--card2);padding:2px 8px;border-radius:20px;}
+.date-separator .ds-line{flex:1;height:1px;background:var(--border);}
 
 .empty-state{text-align:center;padding:40px 20px;color:var(--text-dim);font-size:13px;}
 
@@ -902,6 +909,14 @@ function contactCardHtml(c){
 }
 
 // ---------- CONTACTOS TAB ----------
+function fmtDateSeparator(d){
+  if(d === todayStr()) return 'Hoy · '+fmtDate(d);
+  if(d === tomorrowStr()) return 'Mañana · '+fmtDate(d);
+  const yesterday = addDays(todayStr(), -1);
+  if(d === yesterday) return 'Ayer · '+fmtDate(d);
+  return fmtDate(d);
+}
+
 function renderContactos(){
   const view = document.getElementById('view-contactos');
   const sorted = [...contacts].sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||''));
@@ -909,7 +924,26 @@ function renderContactos(){
   if(sorted.length === 0){
     html += '<div class="empty-state">Todavía no cargaste contactos.<br>Tocá el + para agregar el primero.</div>';
   } else {
-    html += '<div style="margin-top:14px">' + sorted.map(c=>contactCardHtml(c)).join('') + '</div>';
+    // Agrupa por fecha (sin fecha = "Sin fecha", al final) y muestra un separador por cada día
+    const groups = {};
+    const order = [];
+    sorted.forEach(c=>{
+      const key = c.fecha || '_sinfecha';
+      if(!groups[key]){ groups[key] = []; order.push(key); }
+      groups[key].push(c);
+    });
+    let body = '';
+    order.forEach(key=>{
+      const label = key === '_sinfecha' ? 'Sin fecha' : fmtDateSeparator(key);
+      const items = groups[key];
+      body += `<div class="date-separator">
+        <span class="ds-label">${label}</span>
+        <span class="ds-line"></span>
+        <span class="ds-count">${items.length}</span>
+      </div>`;
+      body += items.map(c=>contactCardHtml(c)).join('');
+    });
+    html += body;
   }
   view.innerHTML = html;
 }
