@@ -20,6 +20,7 @@
   --cerrado:#4caf6e;
   --perdido:#e89a3d;
   --tarea:#a978d6;
+  --presupuesto:#c98ad6;
   --radius:14px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -164,10 +165,19 @@ header .sub{color:var(--text-dim);font-size:12px;margin-top:2px;}
 .week-event.ev-cerrado{background:var(--cerrado);}
 .week-event.ev-perdido{background:var(--perdido);}
 .week-event.ev-contactado{background:#9a9aa5;}
+.week-event.ev-presupuesto{background:#c98ad6;}
 .week-mini-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:3px;flex-shrink:0;}
 .week-allday-chip{
   font-size:9px;font-weight:600;padding:1px 4px;border-radius:4px;color:#0c0c0f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;
 }
+.week-allday-chip.ev-tarea{background:var(--tarea);}
+.week-allday-chip.ev-frio{background:var(--frio);}
+.week-allday-chip.ev-caliente{background:var(--caliente);}
+.week-allday-chip.ev-cerrado{background:var(--cerrado);}
+.week-allday-chip.ev-perdido{background:var(--perdido);}
+.week-allday-chip.ev-contactado{background:#9a9aa5;}
+.week-allday-chip.ev-presupuesto{background:#c98ad6;}
 
 /* CONTACT CARD */
 .contact-card{
@@ -604,12 +614,16 @@ function getEventsForDate(dateStr){
   const evs = [];
   contacts.forEach(c=>{
     if(c.fecha === dateStr){
-      evs.push({kind:'contact', estado:c.estado||'contactado', label:(c.empresa||c.nombre), hora:null, ref:c});
+      const estado = c.estado || 'contactado';
+      // Si está cotizado pero todavía no avanzó a caliente/cerrado/perdido,
+      // se distingue con su propio color (violeta) para que no se pierda entre los demás.
+      const visualEstado = (c.cotizado && (estado==='contactado' || estado==='frio')) ? 'presupuesto' : estado;
+      evs.push({kind:'contact', estado:visualEstado, label:(c.empresa||c.nombre), hora:null, ref:c});
     }
   });
   simpleTasks.forEach(t=>{
     if(t.fecha === dateStr){
-      evs.push({kind:'tarea', estado:'tarea', label:t.texto, hora:t.hora||null, ref:t});
+      evs.push({kind:'tarea', estado:'tarea', label:t.texto, hora:t.hora||null, ref:t, done:!!t.done});
     }
   });
   return evs;
@@ -711,7 +725,8 @@ function renderWeekView(){
     let chips = '';
     evs.slice(0,3).forEach(e=>{
       const cls = e.kind==='tarea' ? 'ev-tarea' : 'ev-'+e.estado;
-      chips += `<div class="week-allday-chip ${cls}" onclick="event.stopPropagation();${e.kind==='tarea'?`editSimpleTask('${e.ref.id}')`:`openContact('${e.ref.id}')`}">${esc(e.label)}</div>`;
+      const doneStyle = e.done ? 'text-decoration:line-through;opacity:0.55' : '';
+      chips += `<div class="week-allday-chip ${cls}" style="${doneStyle}" onclick="event.stopPropagation();${e.kind==='tarea'?`editSimpleTask('${e.ref.id}')`:`openContact('${e.ref.id}')`}">${esc(e.label)}</div>`;
     });
     if(evs.length > 3) chips += `<div class="week-allday-chip" style="background:var(--card2);color:var(--text-dim)">+${evs.length-3}</div>`;
     alldayCells += `<div class="week-allday-cell" onclick="goToDay('${ds}')">${chips}</div>`;
@@ -758,6 +773,7 @@ function renderWeekView(){
       evEl.className = `week-event ${cls}`;
       evEl.style.top = topPct+'%';
       evEl.style.height = '38px';
+      if(e.done){ evEl.style.textDecoration = 'line-through'; evEl.style.opacity = '0.55'; }
       evEl.textContent = (e.hora?e.hora+' ':'') + e.label;
       evEl.onclick = (ev)=>{ ev.stopPropagation(); e.kind==='tarea' ? editSimpleTask(e.ref.id) : openContact(e.ref.id); };
       cell.style.position = 'relative';
@@ -880,6 +896,7 @@ function contactCardHtml(c){
       ${c.celular? '<span>📱 '+esc(c.celular)+'</span>':''}
       ${c.importancia? '<span class="imp-badge imp-'+c.importancia+'">★ '+SCALE_LABELS[c.importancia]+'</span>':''}
       ${c.facilidad? '<span class="imp-badge imp-'+c.facilidad+'">⚡ '+SCALE_LABELS[c.facilidad]+'</span>':''}
+      ${c.cotizado? '<span class="imp-badge" style="background:rgba(201,138,214,0.18);color:var(--presupuesto)">📋 Cotizado</span>':''}
     </div>
   </div>`;
 }
@@ -1030,7 +1047,10 @@ function openPresupuestoModal(){
       <div class="field-row">
         <div class="field">
           <label>Empresa</label>
-          <input id="p_empresa" placeholder="Láctea SA">
+          <input id="p_empresa" placeholder="Láctea SA" list="empresasListP" autocomplete="off">
+          <datalist id="empresasListP">
+            ${getEmpresasUnicas().map(emp=>`<option value="${esc(emp)}">`).join('')}
+          </datalist>
         </div>
         <div class="field">
           <label>Nombre</label>
@@ -1054,6 +1074,11 @@ function openPresupuestoModal(){
   document.getElementById('p_existente').onchange = (e)=>{
     document.getElementById('p_nuevoFields').style.display = e.target.value ? 'none' : 'block';
   };
+  document.getElementById('p_empresa').addEventListener('change', ()=>{
+    const match = findLastContactByEmpresa(document.getElementById('p_empresa').value, null);
+    const fNombre = document.getElementById('p_nombre');
+    if(match && !fNombre.value) fNombre.value = match.nombre || '';
+  });
   document.getElementById('modalOverlay').classList.add('show');
 }
 
@@ -1079,8 +1104,10 @@ function savePresupuesto(){
     const empresa = document.getElementById('p_empresa').value.trim();
     const nombre = document.getElementById('p_nombre').value.trim();
     if(!nombre){ alert('Falta el nombre del cliente'); return; }
+    const match = findLastContactByEmpresa(empresa, null);
     contacts.push({
-      id: uid(), nombre, empresa, cargo:'', email:'', celular:'', zona:'',
+      id: uid(), nombre, empresa,
+      cargo: match?.cargo || '', email: match?.email || '', celular: match?.celular || '', zona: match?.zona || '',
       fecha, estado:'caliente', fechaCierre:null,
       cotizado:true, fechaCotizacion:fecha,
       importancia:null, facilidad:null,
@@ -1089,6 +1116,22 @@ function savePresupuesto(){
   }
   save();
   closeModal();
+}
+
+// Busca el contacto más reciente cargado para una empresa (case-insensitive),
+// para autocompletar nombre/cargo/email/celular/zona al cargar uno nuevo.
+function findLastContactByEmpresa(empresaTexto, excludeId){
+  const target = (empresaTexto||'').trim().toLowerCase();
+  if(!target) return null;
+  const matches = contacts
+    .filter(c => c.id !== excludeId && (c.empresa||'').trim().toLowerCase() === target)
+    .sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||''));
+  return matches[0] || null;
+}
+function getEmpresasUnicas(){
+  const set = new Set();
+  contacts.forEach(c=>{ if(c.empresa) set.add(c.empresa); });
+  return [...set];
 }
 
 function openContact(id){
@@ -1102,7 +1145,10 @@ function openContact(id){
     <div class="field-row">
       <div class="field">
         <label>Empresa</label>
-        <input id="f_empresa" value="${esc(c.empresa||'')}" placeholder="Láctea SA">
+        <input id="f_empresa" value="${esc(c.empresa||'')}" placeholder="Láctea SA" list="empresasList" autocomplete="off">
+        <datalist id="empresasList">
+          ${getEmpresasUnicas().map(emp=>`<option value="${esc(emp)}">`).join('')}
+        </datalist>
       </div>
       <div class="field">
         <label>Cargo</label>
@@ -1202,6 +1248,24 @@ function openContact(id){
   document.getElementById('f_cotizado').onchange = (e)=>{
     document.getElementById('fechaCotizacionField').style.display = e.target.checked ? 'block':'none';
   };
+
+  // Autocompleta nombre/cargo/email/celular/zona con el último contacto de la misma empresa
+  // (solo si esos campos están vacíos, para no pisar datos ya escritos al editar)
+  document.getElementById('f_empresa').addEventListener('change', ()=>{
+    const empresaVal = document.getElementById('f_empresa').value;
+    const match = findLastContactByEmpresa(empresaVal, editingId);
+    if(!match) return;
+    const fNombre = document.getElementById('f_nombre');
+    const fCargo = document.getElementById('f_cargo');
+    const fEmail = document.getElementById('f_email');
+    const fCelular = document.getElementById('f_celular');
+    const fZona = document.getElementById('f_zona');
+    if(!fNombre.value) fNombre.value = match.nombre || '';
+    if(!fCargo.value) fCargo.value = match.cargo || '';
+    if(!fEmail.value) fEmail.value = match.email || '';
+    if(!fCelular.value) fCelular.value = match.celular || '';
+    if(!fZona.value) fZona.value = match.zona || '';
+  });
 
   document.getElementById('modalOverlay').classList.add('show');
 }
