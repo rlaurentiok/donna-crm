@@ -1215,38 +1215,15 @@ function savePresupuesto(){
     const celular = document.getElementById('p_celular').value.trim();
     const zona = document.getElementById('p_zona').value.trim();
 
-    // Si ya existe un contacto con la misma empresa + nombre, lo actualizamos
-    // en vez de duplicarlo (igual que al cargar un contacto normal).
-    const empresaNorm = empresa.toLowerCase();
-    const nombreNorm = nombre.toLowerCase();
-    const dup = empresaNorm ? contacts.find(c =>
-      (c.empresa||'').trim().toLowerCase() === empresaNorm &&
-      (c.nombre||'').trim().toLowerCase() === nombreNorm
-    ) : null;
-
-    if(dup){
-      const prev = dup.notas || '';
-      const idx = contacts.findIndex(x=>x.id===dup.id);
-      contacts[idx] = {
-        ...dup,
-        cargo: cargo || dup.cargo,
-        email: email || dup.email,
-        celular: celular || dup.celular,
-        zona: zona || dup.zona,
-        cotizado: true,
-        fechaCotizacion: fecha,
-        estado: dup.estado === 'cerrado' ? dup.estado : 'caliente',
-        notas: (prev ? prev+'\n' : '') + '📋 Cotizado ('+fmtDate(fecha)+'): '+detalle
-      };
-    } else {
-      contacts.push({
-        id: uid(), nombre, empresa, cargo, email, celular, zona,
-        fecha, estado:'caliente', fechaCierre:null,
-        cotizado:true, fechaCotizacion:fecha,
-        importancia:null, facilidad:null,
-        notas:'📋 Cotizado ('+fmtDate(fecha)+'): '+detalle
-      });
-    }
+    // Cada presupuesto es siempre una tarjeta nueva en el calendario,
+    // aunque se repita la empresa/persona de un presupuesto anterior.
+    contacts.push({
+      id: uid(), nombre, empresa, cargo, email, celular, zona,
+      fecha, estado:'caliente', fechaCierre:null,
+      cotizado:true, fechaCotizacion:fecha,
+      importancia:null, facilidad:null,
+      notas:'📋 Cotizado ('+fmtDate(fecha)+'): '+detalle
+    });
   }
   save();
   closeModal();
