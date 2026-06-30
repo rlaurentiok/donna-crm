@@ -155,6 +155,7 @@ header .sub{color:var(--text-dim);font-size:12px;margin-top:2px;}
   border-left:1px solid var(--border);border-bottom:1px solid var(--border);min-height:44px;position:relative;cursor:pointer;
 }
 .week-hour-cell:active{background:rgba(201,168,76,0.08);}
+.week-hour-cell.drag-over,.week-allday-cell.drag-over,.cal-day.drag-over{background:rgba(201,168,76,0.18)!important;}
 .week-event{
   position:absolute;left:2px;right:2px;border-radius:5px;padding:2px 4px;font-size:9.5px;font-weight:600;
   overflow:hidden;line-height:1.2;cursor:pointer;color:#0c0c0f;z-index:1;
@@ -660,7 +661,7 @@ function renderMonthView(){
     seenStates.forEach(s=>{
       dots += `<span class="dot" style="background:var(--${s})"></span>`;
     });
-    grid += `<div class="cal-day ${isToday?'today':''} ${isSel?'selected':''}" onclick="goToDay('${dateStr}')">
+    grid += `<div class="cal-day ${isToday?'today':''} ${isSel?'selected':''}" ondragover="handleDragOver(event)" ondrop="handleDrop(event,'${dateStr}')" onclick="goToDay('${dateStr}')">
       ${day}
       <div class="dots">${dots}</div>
     </div>`;
@@ -733,10 +734,10 @@ function renderWeekView(){
     evs.slice(0,3).forEach(e=>{
       const cls = e.kind==='tarea' ? 'ev-tarea' : 'ev-'+e.estado;
       const doneStyle = e.done ? 'text-decoration:line-through;opacity:0.55' : '';
-      chips += `<div class="week-allday-chip ${cls}" style="${doneStyle}" onclick="event.stopPropagation();${e.kind==='tarea'?`editSimpleTask('${e.ref.id}')`:`openContact('${e.ref.id}')`}">${esc(e.label)}</div>`;
+      chips += `<div class="week-allday-chip ${cls}" style="${doneStyle}" draggable="true" data-kind="${e.kind}" data-id="${e.ref.id}" ondragstart="handleDragStart(event,'${e.kind}','${e.ref.id}')" onclick="event.stopPropagation();${e.kind==='tarea'?`editSimpleTask('${e.ref.id}')`:`openContact('${e.ref.id}')`}">${esc(e.label)}</div>`;
     });
     if(evs.length > 3) chips += `<div class="week-allday-chip" style="background:var(--card2);color:var(--text-dim)">+${evs.length-3}</div>`;
-    alldayCells += `<div class="week-allday-cell" onclick="goToDay('${ds}')">${chips}</div>`;
+    alldayCells += `<div class="week-allday-cell" data-date="${ds}" ondragover="handleDragOver(event)" ondrop="handleDrop(event,'${ds}')" onclick="goToDay('${ds}')">${chips}</div>`;
   });
 
   // hour rows
@@ -744,7 +745,7 @@ function renderWeekView(){
   for(let h=WEEK_START_HOUR; h<WEEK_END_HOUR; h++){
     hourRows += `<div class="week-hour-label">${String(h).padStart(2,'0')}:00</div>`;
     weekDates.forEach(ds=>{
-      hourRows += `<div class="week-hour-cell" data-date="${ds}" data-hour="${h}" onclick="handleHourCellClick('${ds}',${h})"></div>`;
+      hourRows += `<div class="week-hour-cell" data-date="${ds}" data-hour="${h}" ondragover="handleDragOver(event)" ondrop="handleDrop(event,'${ds}',${h})" onclick="handleHourCellClick('${ds}',${h})"></div>`;
     });
   }
 
@@ -780,6 +781,8 @@ function renderWeekView(){
       evEl.className = `week-event ${cls}`;
       evEl.style.top = topPct+'%';
       evEl.style.height = '38px';
+      evEl.draggable = true;
+      evEl.addEventListener('dragstart', (ev)=> handleDragStart(ev, e.kind, e.ref.id));
       if(e.done){ evEl.style.textDecoration = 'line-through'; evEl.style.opacity = '0.55'; }
       evEl.textContent = (e.hora?e.hora+' ':'') + e.label;
       evEl.onclick = (ev)=>{ ev.stopPropagation(); e.kind==='tarea' ? editSimpleTask(e.ref.id) : openContact(e.ref.id); };
@@ -793,6 +796,44 @@ function handleHourCellClick(dateStr, hour){
   selectedDate = dateStr;
   openTaskModal(dateStr, `${String(hour).padStart(2,'0')}:00`);
 }
+
+// ---------- DRAG AND DROP (mover tareas/contactos a otro día, PC con mouse) ----------
+function handleDragStart(ev, kind, id){
+  ev.dataTransfer.setData('text/plain', JSON.stringify({kind, id}));
+  ev.dataTransfer.effectAllowed = 'move';
+}
+function handleDragOver(ev){
+  ev.preventDefault(); // necesario para permitir el drop
+  ev.dataTransfer.dropEffect = 'move';
+  ev.currentTarget.classList.add('drag-over');
+}
+function handleDrop(ev, newDate, newHour){
+  ev.preventDefault();
+  ev.stopPropagation();
+  ev.currentTarget.classList.remove('drag-over');
+  let data;
+  try{ data = JSON.parse(ev.dataTransfer.getData('text/plain')); } catch(e){ return; }
+  if(!data) return;
+
+  if(data.kind === 'tarea'){
+    const t = simpleTasks.find(x=>x.id===data.id);
+    if(!t) return;
+    t.fecha = newDate;
+    if(newHour !== undefined){ t.hora = `${String(newHour).padStart(2,'0')}:00`; }
+    saveTasks();
+  } else {
+    const c = contacts.find(x=>x.id===data.id);
+    if(!c) return;
+    c.fecha = newDate;
+    save();
+  }
+  renderCalendar();
+}
+document.addEventListener('dragleave', (ev)=>{
+  if(ev.target.classList && ev.target.classList.contains('drag-over')){
+    ev.target.classList.remove('drag-over');
+  }
+});
 
 function changeWeek(delta){
   weekRefDate = addDays(getMonday(weekRefDate).toISOString().slice(0,10), delta*7);
@@ -809,7 +850,7 @@ function renderDayList(){
   let html = '';
   if(dayTasks.length > 0){
     html += dayTasks.map(t=>`
-      <div class="task-item">
+      <div class="task-item" draggable="true" ondragstart="handleDragStart(event,'tarea','${t.id}')" style="cursor:grab">
         <div class="task-info" onclick="editSimpleTask('${t.id}')" style="cursor:pointer">
           <div class="task-name" style="${t.done?'text-decoration:line-through;color:var(--text-dim)':''}">${t.hora?'<span style="color:var(--tarea)">'+t.hora+'</span> · ':''}${esc(t.texto)}</div>
           <span class="task-tag tag-tarea">Tarea</span>
@@ -824,7 +865,7 @@ function renderDayList(){
   if(list.length === 0 && dayTasks.length === 0){
     html = '<div class="empty-state">Sin contactos ni tareas este día</div>';
   } else {
-    html += list.map(c=>contactCardHtml(c)).join('');
+    html += list.map(c=>contactCardHtml(c, true)).join('');
   }
   el.innerHTML = html;
 }
@@ -887,9 +928,10 @@ function saveSimpleTask(taskId){
 }
 
 // ---------- CONTACT CARD ----------
-function contactCardHtml(c){
+function contactCardHtml(c, draggableInCalendar){
   const estado = c.estado || 'contactado';
-  return `<div class="contact-card" onclick="openContact('${c.id}')">
+  const dragAttrs = draggableInCalendar ? `draggable="true" ondragstart="handleDragStart(event,'contact','${c.id}')" style="cursor:grab"` : '';
+  return `<div class="contact-card" ${dragAttrs} onclick="openContact('${c.id}')">
     <div class="contact-top">
       <div>
         <div class="contact-company">${esc(c.empresa||'(Sin empresa)')}</div>
@@ -1091,6 +1133,26 @@ function openPresupuestoModal(){
           <input id="p_nombre" placeholder="Juan Pérez">
         </div>
       </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Puesto (opcional)</label>
+          <input id="p_cargo" placeholder="Jefe de Calidad">
+        </div>
+        <div class="field">
+          <label>Email (opcional)</label>
+          <input id="p_email" placeholder="juan@empresa.com">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Celular (opcional)</label>
+          <input id="p_celular" placeholder="3492-...">
+        </div>
+        <div class="field">
+          <label>Zona (opcional)</label>
+          <input id="p_zona" placeholder="Rafaela, NOA, etc.">
+        </div>
+      </div>
     </div>
     <div class="field">
       <label>¿Qué le cotizaste?</label>
@@ -1110,8 +1172,17 @@ function openPresupuestoModal(){
   };
   document.getElementById('p_empresa').addEventListener('change', ()=>{
     const match = findLastContactByEmpresa(document.getElementById('p_empresa').value, null);
+    if(!match) return;
     const fNombre = document.getElementById('p_nombre');
-    if(match && !fNombre.value) fNombre.value = match.nombre || '';
+    const fCargo = document.getElementById('p_cargo');
+    const fEmail = document.getElementById('p_email');
+    const fCelular = document.getElementById('p_celular');
+    const fZona = document.getElementById('p_zona');
+    if(!fNombre.value) fNombre.value = match.nombre || '';
+    if(!fCargo.value) fCargo.value = match.cargo || '';
+    if(!fEmail.value) fEmail.value = match.email || '';
+    if(!fCelular.value) fCelular.value = match.celular || '';
+    if(!fZona.value) fZona.value = match.zona || '';
   });
   document.getElementById('modalOverlay').classList.add('show');
 }
@@ -1138,15 +1209,44 @@ function savePresupuesto(){
     const empresa = document.getElementById('p_empresa').value.trim();
     const nombre = document.getElementById('p_nombre').value.trim();
     if(!nombre){ alert('Falta el nombre del cliente'); return; }
-    const match = findLastContactByEmpresa(empresa, null);
-    contacts.push({
-      id: uid(), nombre, empresa,
-      cargo: match?.cargo || '', email: match?.email || '', celular: match?.celular || '', zona: match?.zona || '',
-      fecha, estado:'caliente', fechaCierre:null,
-      cotizado:true, fechaCotizacion:fecha,
-      importancia:null, facilidad:null,
-      notas:'📋 Cotizado ('+fmtDate(fecha)+'): '+detalle
-    });
+
+    const cargo = document.getElementById('p_cargo').value.trim();
+    const email = document.getElementById('p_email').value.trim();
+    const celular = document.getElementById('p_celular').value.trim();
+    const zona = document.getElementById('p_zona').value.trim();
+
+    // Si ya existe un contacto con la misma empresa + nombre, lo actualizamos
+    // en vez de duplicarlo (igual que al cargar un contacto normal).
+    const empresaNorm = empresa.toLowerCase();
+    const nombreNorm = nombre.toLowerCase();
+    const dup = empresaNorm ? contacts.find(c =>
+      (c.empresa||'').trim().toLowerCase() === empresaNorm &&
+      (c.nombre||'').trim().toLowerCase() === nombreNorm
+    ) : null;
+
+    if(dup){
+      const prev = dup.notas || '';
+      const idx = contacts.findIndex(x=>x.id===dup.id);
+      contacts[idx] = {
+        ...dup,
+        cargo: cargo || dup.cargo,
+        email: email || dup.email,
+        celular: celular || dup.celular,
+        zona: zona || dup.zona,
+        cotizado: true,
+        fechaCotizacion: fecha,
+        estado: dup.estado === 'cerrado' ? dup.estado : 'caliente',
+        notas: (prev ? prev+'\n' : '') + '📋 Cotizado ('+fmtDate(fecha)+'): '+detalle
+      };
+    } else {
+      contacts.push({
+        id: uid(), nombre, empresa, cargo, email, celular, zona,
+        fecha, estado:'caliente', fechaCierre:null,
+        cotizado:true, fechaCotizacion:fecha,
+        importancia:null, facilidad:null,
+        notas:'📋 Cotizado ('+fmtDate(fecha)+'): '+detalle
+      });
+    }
   }
   save();
   closeModal();
@@ -1333,8 +1433,24 @@ function saveContact(){
     notas: document.getElementById('f_notas').value.trim()
   };
 
+  // Si ya existe un contacto con la misma empresa + nombre (y no es el que estamos editando),
+  // lo sobreescribimos en vez de crear un duplicado. Así "MAFRALAC + Paula Gómez" siempre
+  // queda como un único registro, aunque haya otras personas distintas en la misma empresa.
+  const empresaNorm = data.empresa.trim().toLowerCase();
+  const nombreNorm = data.nombre.trim().toLowerCase();
+  const dup = contacts.find(c =>
+    c.id !== editingId &&
+    (c.empresa||'').trim().toLowerCase() === empresaNorm &&
+    (c.nombre||'').trim().toLowerCase() === nombreNorm &&
+    empresaNorm !== ''
+  );
+
   if(editingId){
     const idx = contacts.findIndex(x=>x.id===editingId);
+    contacts[idx] = data;
+  } else if(dup){
+    data.id = dup.id; // conserva el id original para no perder histórico
+    const idx = contacts.findIndex(x=>x.id===dup.id);
     contacts[idx] = data;
   } else {
     contacts.push(data);
