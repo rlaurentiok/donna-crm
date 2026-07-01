@@ -576,6 +576,51 @@ function renderBanner(){
     html += tomorrowTasks.map(t=>taskHtml(t,true)).join('');
   }
 
+  // Próximos seguimientos: todos los que caen en los próximos 30 días
+  const upcoming = [];
+  for(let i=2; i<=30; i++){
+    const d = addDays(today, i);
+    contacts.forEach(c=>{
+      const target = getSeguimientoTarget(c);
+      if(target === d){
+        const key = c.id+'_seguimiento_'+d;
+        if(!dismissed[key]){
+          upcoming.push({
+            fecha: d,
+            label: (c.empresa||c.nombre) + (c.empresa?' · '+c.nombre:''),
+            tipo: c.cotizado ? 'Seguimiento cotización' : 'Seguimiento contacto'
+          });
+        }
+      }
+      if(c.estado === 'cerrado' && c.fechaCierre){
+        const postventaDate = addBusinessAwareDays(c.fechaCierre, 21);
+        if(postventaDate === d){
+          const key = c.id+'_postventa_'+d;
+          if(!dismissed[key]){
+            upcoming.push({
+              fecha: d,
+              label: (c.empresa||c.nombre) + (c.empresa?' · '+c.nombre:''),
+              tipo: 'Postventa'
+            });
+          }
+        }
+      }
+    });
+  }
+
+  if(upcoming.length > 0){
+    html += '<div class="banner-subtitle" style="margin-top:14px">Próximos seguimientos</div>';
+    upcoming.forEach(u=>{
+      html += `<div class="task-item">
+        <div class="task-info">
+          <div class="task-name">${esc(u.label)}</div>
+          <div class="task-detail">${fmtDate(u.fecha)}</div>
+          <span class="task-tag tag-seguimiento">${esc(u.tipo)}</span>
+        </div>
+      </div>`;
+    });
+  }
+
   banner.innerHTML = html;
 }
 
