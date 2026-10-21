@@ -63,6 +63,7 @@ textarea{resize:vertical;min-height:38px}
 .b-ok.on{background:var(--ok);color:#fff;border-color:var(--ok)}
 .b-pen.on{background:var(--pen);color:#fff;border-color:var(--pen)}
 .b-can.on{background:var(--can);color:#fff;border-color:var(--can)}
+.item,.chip{cursor:pointer}.item:hover{box-shadow:0 2px 10px rgba(0,0,0,.07)}
 .del{border:0;background:none;color:var(--mute);font-size:12px;padding:0;text-align:left}
 .del:hover{color:var(--can)}
 .empty{color:var(--mute);font-size:13px;text-align:center;padding:18px}
@@ -80,6 +81,20 @@ textarea{resize:vertical;min-height:38px}
 .age.late{color:#9e2323;background:var(--canbg)}
 .b-call{width:auto!important;padding:0 8px!important;font-size:12px!important;font-weight:600!important}
 .agday{font-size:13px;color:var(--mute);margin:0 0 10px;font-weight:600}
+.modal{position:fixed;inset:0;background:rgba(20,25,40,.45);display:none;align-items:center;justify-content:center;z-index:50}
+.modal.open{display:flex}
+.mbox{background:#fff;border-radius:16px;padding:22px;width:min(560px,92vw);max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.mbox h3{margin:0 0 4px;font-size:18px}.mbox .meta{font-size:12px;color:var(--mute);margin-bottom:14px}
+.mbox label{font-size:12px;font-weight:600;color:var(--mute);display:grid;gap:4px}
+.mbox .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.mbox textarea{min-height:120px}
+.stsel{display:flex;gap:6px;margin:4px 0 12px}
+.stsel button{flex:1;font-weight:600}
+.stsel .pendiente.on{background:var(--pen);color:#fff;border-color:var(--pen)}
+.stsel .hecho.on{background:var(--ok);color:#fff;border-color:var(--ok)}
+.stsel .cancelado.on{background:var(--can);color:#fff;border-color:var(--can)}
+.mfoot{display:flex;gap:8px;margin-top:14px}.mfoot .sp{flex:1}
+.danger{color:var(--can)}
 </style>
 </head>
 <body>
@@ -136,6 +151,33 @@ textarea{resize:vertical;min-height:38px}
   </aside>
 </main>
 
+<div class="modal" id="modal" onclick="if(event.target===this)closeEdit()">
+  <div class="mbox">
+    <h3 id="mTitle"></h3>
+    <div class="meta" id="mMeta"></div>
+    <label>Estado</label>
+    <div class="stsel" id="mSt">
+      <button type="button" class="pendiente" onclick="mSet('pendiente')">● Pendiente</button>
+      <button type="button" class="hecho" onclick="mSet('hecho')">✓ Hecho</button>
+      <button type="button" class="cancelado" onclick="mSet('cancelado')">✕ Cancelado</button>
+    </div>
+    <div class="grid2">
+      <label>Cliente<input id="mCli" list="clis"></label>
+      <label>Presupuesto<input id="mNum"></label>
+      <label>Tipo de equipo<input id="mEqu" list="equs"></label>
+      <label>Fecha<input id="mFec" type="date"></label>
+      <label>Próximo seguimiento<input id="mSeg" type="date"></label>
+    </div>
+    <label>Descripción / notas<textarea id="mNot" placeholder="Detalle del presupuesto, contacto, lo que hablaron…"></textarea></label>
+    <div class="mfoot">
+      <button class="danger" onclick="if(del(editId))closeEdit()">Eliminar</button>
+      <span class="sp"></span>
+      <button onclick="closeEdit()">Cancelar</button>
+      <button class="primary" onclick="saveEdit()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const KEY='certis-cache-v1',QKEY='certis-queue-v1',PKEY='certis-pin';
 const ST={pendiente:{c:'var(--pen)'},hecho:{c:'var(--ok)'},cancelado:{c:'var(--can)'}};
@@ -185,7 +227,7 @@ const addDays=(s,n)=>{const d=new Date(s+'T12:00');d.setDate(d.getDate()+n);retu
 const daysSince=s=>Math.round((new Date(todayISO+'T12:00')-new Date(s+'T12:00'))/864e5);
 const dueDate=i=>i.seguir||addDays(i.fecha,3);
 function contactado(id){const it=all.find(i=>i.id===id);it.seguir=addDays(todayISO,3);it.notas=(it.notas?it.notas+' · ':'')+'contactado '+fmt(todayISO);touch(it);render()}
-function del(id){if(confirm('¿Eliminar este registro?')){const it=all.find(i=>i.id===id);it.borrado=true;touch(it);render()}}
+function del(id){if(confirm('¿Eliminar este registro?')){const it=all.find(i=>i.id===id);it.borrado=true;touch(it);render();return true}return false}
 
 document.getElementById('f').onsubmit=e=>{
   e.preventDefault();
@@ -213,7 +255,7 @@ function render(){
   const pen=items.filter(i=>i.status==='pendiente');
   const hoy=pen.filter(i=>i.fecha===todayISO);
   const seg=pen.filter(i=>i.fecha<todayISO&&dueDate(i)<=todayISO).sort((a,b)=>dueDate(a).localeCompare(dueDate(b)));
-  const agRow=(i,extra)=>`<div class="item pendiente"><div><b>${esc(i.numero||'s/n')} — ${esc(i.cliente)}</b>${extra||''}
+  const agRow=(i,extra)=>`<div class="item pendiente" data-id="${i.id}"><div><b>${esc(i.numero||'s/n')} — ${esc(i.cliente)}</b>${extra||''}
       <div class="meta">${esc(i.equipo)}${i.equipo?' · ':''}${fmt(i.fecha)}${i.notas?' · '+esc(i.notas):''}</div></div>
       <div class="acts">${extra?`<button class="b-call" title="Lo contacté: volver a recordar en 3 días" onclick="contactado('${i.id}')">📞 Contactado</button>`:''}
       <button class="b-ok" title="Hecho" onclick="setStatus('${i.id}','hecho')">✓</button>
@@ -253,7 +295,7 @@ function render(){
     const dots=['pendiente','hecho','cancelado'].map(s=>list.some(i=>i.status===s)?`<span class="dot" style="background:${ST[s].c}"></span>`:'').join('');
     return `<div class="day ${out?'out':''} ${k===todayISO?'today':''} ${k===sel?'sel':''}" onclick="pick('${k}')">
       <div class="n"><span>${d.getDate()}</span><span class="dots">${dots}</span></div>
-      ${list.slice(0,max).map(i=>`<div class="chip ${i.status}" title="${esc(i.cliente)} · ${esc(i.numero)}">${esc(i.numero||'s/n')} · ${esc(i.cliente)}</div>`).join('')}
+      ${list.slice(0,max).map(i=>`<div class="chip ${i.status}" data-id="${i.id}" title="${esc(i.cliente)} · ${esc(i.numero)}">${esc(i.numero||'s/n')} · ${esc(i.cliente)}</div>`).join('')}
       ${list.length>max?`<div class="more">+${list.length-max} más</div>`:''}
     </div>`}).join('');
 
@@ -263,7 +305,7 @@ function render(){
   L.sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.creado.localeCompare(b.creado));
   const head=tab==='day'?`<div class="meta" style="font-size:13px;color:var(--mute)">${new Date(sel+'T12:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})} · ${L.length} registro${L.length!==1?'s':''}</div>`:'';
   document.getElementById('list').innerHTML=head+(L.length?L.map(i=>`
-    <div class="item ${i.status}">
+    <div class="item ${i.status}" data-id="${i.id}">
       <div>
         <b>${esc(i.numero||'s/n')} — ${esc(i.cliente)}</b>
         <div class="meta">${esc(i.equipo)}${i.equipo?' · ':''}${fmt(i.fecha)}${i.notas?' · '+esc(i.notas):''}</div>
@@ -292,6 +334,33 @@ function restore(inp){
   const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d))throw 0;if(confirm(`Restaurar ${d.length} registros del backup? Se suman a los actuales (no borra nada).`)){const now=Date.now();d.forEach(x=>{if(!all.some(i=>i.id===x.id)){x.upd=now;all.push(x);queue[x.id]=x}});persist();render();sync()}}catch(e){alert('Archivo inválido')}};
   r.readAsText(inp.files[0]);inp.value='';
 }
+
+// ---- edición ----
+let editId=null,mStatus='pendiente';
+const $=id=>document.getElementById(id);
+function mSet(st){mStatus=st;[...$('mSt').children].forEach(b=>b.classList.toggle('on',b.classList.contains(st)))}
+function openEdit(id){
+  const i=all.find(x=>x.id===id);if(!i)return;editId=id;
+  $('mTitle').textContent=(i.numero||'s/n')+' — '+i.cliente;
+  $('mMeta').textContent=(isNaN(new Date(i.creado))?'':'Creado '+new Date(i.creado).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}))+(i.upd?' · Última modificación '+new Date(i.upd).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'');
+  $('mCli').value=i.cliente||'';$('mNum').value=i.numero||'';$('mEqu').value=i.equipo||'';
+  $('mFec').value=i.fecha;$('mSeg').value=dueDate(i);$('mNot').value=i.notas||'';
+  mSet(i.status);$('modal').classList.add('open');setTimeout(()=>$('mNot').focus(),50);
+}
+function closeEdit(){$('modal').classList.remove('open');editId=null}
+function saveEdit(){
+  const i=all.find(x=>x.id===editId);if(!i)return;
+  if(!$('mCli').value.trim()){alert('Falta el cliente');return}
+  i.cliente=$('mCli').value.trim();i.numero=$('mNum').value.trim();i.equipo=$('mEqu').value.trim();
+  i.fecha=$('mFec').value||i.fecha;i.notas=$('mNot').value.trim();i.status=mStatus;
+  const sg=$('mSeg').value;i.seguir=(sg&&sg!==addDays(i.fecha,3))?sg:undefined;
+  touch(i);closeEdit();render();
+}
+document.addEventListener('click',e=>{
+  if(e.target.closest('button,#modal'))return;
+  const el=e.target.closest('[data-id]');if(el)openEdit(el.dataset.id);
+});
+document.addEventListener('keydown',e=>{if(!editId)return;if(e.key==='Escape')closeEdit();if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))saveEdit()});
 
 document.getElementById('fec').value=todayISO;
 render();sync();
