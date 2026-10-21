@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Certis · Registro diario</title>
+<title>Donna · Leads</title>
 <style>
 :root{
   --bg:#f4f5f7;--card:#fff;--ink:#1d2433;--mute:#6b7385;--line:#e3e6ec;--acc:#1f4fd1;
@@ -69,12 +69,22 @@ textarea{resize:vertical;min-height:38px}
 .tabs{display:flex;gap:6px;margin:14px 0 4px}
 .tabs button.on{background:var(--ink);color:#fff}
 #q{margin-top:6px}
-.banner{background:var(--penbg);border:1px solid #f1d98a;border-radius:10px;padding:8px 12px;font-size:13px;margin-bottom:12px;display:none}
+.agenda{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.agenda h4{margin:0 0 4px;font-size:15px}
+.agenda .sub{font-size:12px;color:var(--mute);margin-bottom:8px}
+.ag{border-radius:12px;padding:12px;border:1px solid var(--line)}
+.ag.hoy{background:#eef3ff;border-color:#c9d6fb}
+.ag.segui{background:#fffaf0;border-color:#f1d98a}
+.ag .item{background:#fff;margin-top:6px}
+.age{font-size:11px;font-weight:700;color:#8a6200;background:var(--penbg);padding:1px 6px;border-radius:6px;margin-left:4px}
+.age.late{color:#9e2323;background:var(--canbg)}
+.b-call{width:auto!important;padding:0 8px!important;font-size:12px!important;font-weight:600!important}
+.agday{font-size:13px;color:var(--mute);margin:0 0 10px;font-weight:600}
 </style>
 </head>
 <body>
 <header>
-  <h1>Certis<span>.</span></h1>
+  <h1>Donna<span>.</span></h1>
   <span class="sync" id="sync">conectando…</span>
   <div class="stats" id="stats"></div>
   <div class="tools">
@@ -87,7 +97,8 @@ textarea{resize:vertical;min-height:38px}
 
 <main>
   <section class="card">
-    <div class="banner" id="banner"></div>
+    <div class="agday" id="agday"></div>
+    <div class="agenda" id="agenda"></div>
     <div class="calhead">
       <button onclick="move(-1)">‹</button>
       <button onclick="goToday()">Hoy</button>
@@ -100,12 +111,12 @@ textarea{resize:vertical;min-height:38px}
   </section>
 
   <aside class="card side">
-    <h3 id="selTitle">Cargar certificado</h3>
+    <h3 id="selTitle">Leads</h3>
     <form id="f" autocomplete="off">
       <input id="cli" list="clis" placeholder="Cliente" required>
       <datalist id="clis"></datalist>
       <div class="row">
-        <input id="num" placeholder="N° certificado">
+        <input id="num" placeholder="Presupuesto">
         <input id="equ" list="equs" placeholder="Tipo de equipo">
         <datalist id="equs"></datalist>
       </div>
@@ -120,7 +131,7 @@ textarea{resize:vertical;min-height:38px}
       <button id="tDay" onclick="setTab('day')">Del día</button>
       <button id="tPen" onclick="setTab('pen')">Todos los pendientes</button>
     </div>
-    <input id="q" placeholder="Buscar cliente, N°, equipo…" oninput="render()">
+    <input id="q" placeholder="Buscar cliente, presupuesto, equipo…" oninput="render()">
     <div class="list" id="list"></div>
   </aside>
 </main>
@@ -146,7 +157,7 @@ async function sync(){
   try{
     const pend=Object.values(queue);
     const r=await fetch('/api/data',{method:pend.length?'POST':'GET',headers:{'Content-Type':'application/json','x-pin':localStorage.getItem(PKEY)||''},body:pend.length?JSON.stringify({items:pend}):undefined});
-    if(r.status===401){const p=prompt('Ingresá el PIN de Certis:');if(p!==null){localStorage.setItem(PKEY,p.trim());syncing=false;return sync()}throw 0}
+    if(r.status===401){const p=prompt('Ingresá el PIN de Donna:');if(p!==null){localStorage.setItem(PKEY,p.trim());syncing=false;return sync()}throw 0}
     if(!r.ok)throw 0;
     const d=await r.json();
     pend.forEach(p=>{if(queue[p.id]&&queue[p.id].upd===p.upd)delete queue[p.id]});
@@ -170,6 +181,10 @@ function goToday(){cursor=new Date();sel=todayISO;render()}
 function move(n){if(view==='week')cursor.setDate(cursor.getDate()+7*n);else cursor.setMonth(cursor.getMonth()+n);cursor=new Date(cursor);render()}
 function pick(d){sel=d;tab='day';document.getElementById('fec').value=d;render()}
 function setStatus(id,s){const it=all.find(i=>i.id===id);it.status=s;touch(it);render()}
+const addDays=(s,n)=>{const d=new Date(s+'T12:00');d.setDate(d.getDate()+n);return iso(d)};
+const daysSince=s=>Math.round((new Date(todayISO+'T12:00')-new Date(s+'T12:00'))/864e5);
+const dueDate=i=>i.seguir||addDays(i.fecha,3);
+function contactado(id){const it=all.find(i=>i.id===id);it.seguir=addDays(todayISO,3);it.notas=(it.notas?it.notas+' · ':'')+'contactado '+fmt(todayISO);touch(it);render()}
 function del(id){if(confirm('¿Eliminar este registro?')){const it=all.find(i=>i.id===id);it.borrado=true;touch(it);render()}}
 
 document.getElementById('f').onsubmit=e=>{
@@ -194,10 +209,21 @@ function render(){
     [['all','s-all','Todos',items.length],['pendiente','s-pen','Pendientes',c('pendiente')],['hecho','s-ok','Hechos',c('hecho')],['cancelado','s-can','Cancelados',c('cancelado')]]
     .map(([k,cl,l,n])=>`<span class="stat ${cl} ${filter===k?'active':''}" onclick="filter='${k}';render()">${l}: ${n}</span>`).join('');
 
-  const old=items.filter(i=>i.status==='pendiente'&&i.fecha<todayISO).length;
-  const b=document.getElementById('banner');
-  b.style.display=old?'block':'none';
-  b.innerHTML=`⚠ Tenés <b>${old}</b> certificado${old>1?'s':''} pendiente${old>1?'s':''} de días anteriores. <a href="#" onclick="setTab('pen');return false">Ver</a>`;
+  // agenda diaria
+  const pen=items.filter(i=>i.status==='pendiente');
+  const hoy=pen.filter(i=>i.fecha===todayISO);
+  const seg=pen.filter(i=>i.fecha<todayISO&&dueDate(i)<=todayISO).sort((a,b)=>dueDate(a).localeCompare(dueDate(b)));
+  const agRow=(i,extra)=>`<div class="item pendiente"><div><b>${esc(i.numero||'s/n')} — ${esc(i.cliente)}</b>${extra||''}
+      <div class="meta">${esc(i.equipo)}${i.equipo?' · ':''}${fmt(i.fecha)}${i.notas?' · '+esc(i.notas):''}</div></div>
+      <div class="acts">${extra?`<button class="b-call" title="Lo contacté: volver a recordar en 3 días" onclick="contactado('${i.id}')">📞 Contactado</button>`:''}
+      <button class="b-ok" title="Hecho" onclick="setStatus('${i.id}','hecho')">✓</button>
+      <button class="b-can" title="Cancelado" onclick="setStatus('${i.id}','cancelado')">✕</button></div></div>`;
+  document.getElementById('agday').textContent='Agenda de hoy · '+new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('agenda').innerHTML=`
+    <div class="ag hoy"><h4>📌 Para hoy (${hoy.length})</h4><div class="sub">Lo que cargaste para hoy y sigue pendiente</div>
+      ${hoy.length?hoy.map(i=>agRow(i)).join(''):'<div class="empty">Nada agendado para hoy.</div>'}</div>
+    <div class="ag segui"><h4>📞 Seguimiento (${seg.length})</h4><div class="sub">Presupuestos pendientes con 3 días o más — llamalos</div>
+      ${seg.length?seg.map(i=>{const d=daysSince(i.fecha);return agRow(i,`<span class="age ${d>3&&!i.seguir?'late':''}">${i.seguir?'re-contactar':'hace '+d+' días'}</span>`)}).join(''):'<div class="empty">Sin seguimientos pendientes. 👌</div>'}</div>`;
 
   document.getElementById('vw').className=view==='week'?'on':'';
   document.getElementById('vm').className=view==='month'?'on':'';
@@ -232,7 +258,7 @@ function render(){
     </div>`}).join('');
 
   // side list
-  document.getElementById('selTitle').textContent='Cargar certificado';
+  document.getElementById('selTitle').textContent='Leads';
   let L=tab==='day'?items.filter(i=>i.fecha===sel&&matches(i)):items.filter(i=>i.status==='pendiente'&&matches(i));
   L.sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.creado.localeCompare(b.creado));
   const head=tab==='day'?`<div class="meta" style="font-size:13px;color:var(--mute)">${new Date(sel+'T12:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})} · ${L.length} registro${L.length!==1?'s':''}</div>`:'';
@@ -258,10 +284,10 @@ function render(){
 
 function dl(name,content,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click()}
 function exportCSV(){
-  const rows=[['Fecha','Cliente','N° certificado','Equipo','Estado','Notas'],...[...items].sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(i=>[fmt(i.fecha),i.cliente,i.numero,i.equipo,i.status,i.notas])];
-  dl(`certis_${todayISO}.csv`,'\ufeff'+rows.map(r=>r.map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(';')).join('\n'),'text/csv');
+  const rows=[['Fecha','Cliente','Presupuesto','Equipo','Estado','Notas'],...[...items].sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(i=>[fmt(i.fecha),i.cliente,i.numero,i.equipo,i.status,i.notas])];
+  dl(`donna_${todayISO}.csv`,'\ufeff'+rows.map(r=>r.map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(';')).join('\n'),'text/csv');
 }
-function backup(){dl(`certis_backup_${todayISO}.json`,JSON.stringify(items,null,1),'application/json')}
+function backup(){dl(`donna_backup_${todayISO}.json`,JSON.stringify(items,null,1),'application/json')}
 function restore(inp){
   const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d))throw 0;if(confirm(`Restaurar ${d.length} registros del backup? Se suman a los actuales (no borra nada).`)){const now=Date.now();d.forEach(x=>{if(!all.some(i=>i.id===x.id)){x.upd=now;all.push(x);queue[x.id]=x}});persist();render();sync()}}catch(e){alert('Archivo inválido')}};
   r.readAsText(inp.files[0]);inp.value='';
