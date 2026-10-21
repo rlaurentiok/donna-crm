@@ -29,7 +29,7 @@ main{display:grid;grid-template-columns:1fr 380px;gap:18px;padding:18px 22px;max
 .calhead h2{margin:0 8px;font-size:17px;text-transform:capitalize;min-width:190px}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-left:auto}
 .seg button{border:0;border-radius:0}.seg button.on{background:var(--ink);color:#fff}
-.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .dow{font-size:11px;color:var(--mute);text-transform:uppercase;text-align:center;padding-bottom:4px;font-weight:600}
 .day{border:1px solid var(--line);border-radius:10px;padding:6px;min-height:92px;cursor:pointer;background:#fff;display:flex;flex-direction:column;gap:3px;overflow:hidden}
 .week .day{min-height:380px}
@@ -65,7 +65,7 @@ textarea{resize:vertical;min-height:38px}
 .b-can.on{background:var(--can);color:#fff;border-color:var(--can)}
 .item,.chip{cursor:pointer}.item:hover{box-shadow:0 2px 10px rgba(0,0,0,.07)}
 .del{border:0;background:none;color:var(--mute);font-size:12px;padding:0;text-align:left}
-.del:hover{color:var(--can)}
+.del:hover{color:var(--can)}.del.edit{color:var(--acc);font-weight:600}.del.edit:hover{color:var(--acc);text-decoration:underline}
 .empty{color:var(--mute);font-size:13px;text-align:center;padding:18px}
 .tabs{display:flex;gap:6px;margin:14px 0 4px}
 .tabs button.on{background:var(--ink);color:#fff}
@@ -224,9 +224,12 @@ function move(n){if(view==='week')cursor.setDate(cursor.getDate()+7*n);else curs
 function pick(d){sel=d;tab='day';document.getElementById('fec').value=d;render()}
 function setStatus(id,s){const it=all.find(i=>i.id===id);it.status=s;touch(it);render()}
 const addDays=(s,n)=>{const d=new Date(s+'T12:00');d.setDate(d.getDate()+n);return iso(d)};
-const daysSince=s=>Math.round((new Date(todayISO+'T12:00')-new Date(s+'T12:00'))/864e5);
-const dueDate=i=>i.seguir||addDays(i.fecha,3);
-function contactado(id){const it=all.find(i=>i.id===id);it.seguir=addDays(todayISO,3);it.notas=(it.notas?it.notas+' · ':'')+'contactado '+fmt(todayISO);touch(it);render()}
+// días hábiles (lunes a viernes)
+const isWE=s=>{const g=new Date(s+'T12:00').getDay();return g===0||g===6};
+const addBiz=(s,n)=>{let d=s;while(n>0){d=addDays(d,1);if(!isWE(d))n--}return d};
+const daysSince=s=>{let n=0,d=s;while(d<todayISO){d=addDays(d,1);if(!isWE(d))n++}return n};
+const dueDate=i=>i.seguir||addBiz(i.fecha,3);
+function contactado(id){const it=all.find(i=>i.id===id);it.seguir=addBiz(todayISO,3);it.notas=(it.notas?it.notas+' · ':'')+'contactado '+fmt(todayISO);touch(it);render()}
 function del(id){if(confirm('¿Eliminar este registro?')){const it=all.find(i=>i.id===id);it.borrado=true;touch(it);render();return true}return false}
 
 document.getElementById('f').onsubmit=e=>{
@@ -257,15 +260,15 @@ function render(){
   const seg=pen.filter(i=>i.fecha<todayISO&&dueDate(i)<=todayISO).sort((a,b)=>dueDate(a).localeCompare(dueDate(b)));
   const agRow=(i,extra)=>`<div class="item pendiente" data-id="${i.id}"><div><b>${esc(i.numero||'s/n')} — ${esc(i.cliente)}</b>${extra||''}
       <div class="meta">${esc(i.equipo)}${i.equipo?' · ':''}${fmt(i.fecha)}${i.notas?' · '+esc(i.notas):''}</div></div>
-      <div class="acts">${extra?`<button class="b-call" title="Lo contacté: volver a recordar en 3 días" onclick="contactado('${i.id}')">📞 Contactado</button>`:''}
+      <div class="acts"><button title="Editar" onclick="openEdit('${i.id}')">✏️</button>${extra?`<button class="b-call" title="Lo contacté: volver a recordar en 3 días" onclick="contactado('${i.id}')">📞 Contactado</button>`:''}
       <button class="b-ok" title="Hecho" onclick="setStatus('${i.id}','hecho')">✓</button>
       <button class="b-can" title="Cancelado" onclick="setStatus('${i.id}','cancelado')">✕</button></div></div>`;
   document.getElementById('agday').textContent='Agenda de hoy · '+new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
   document.getElementById('agenda').innerHTML=`
     <div class="ag hoy"><h4>📌 Para hoy (${hoy.length})</h4><div class="sub">Lo que cargaste para hoy y sigue pendiente</div>
       ${hoy.length?hoy.map(i=>agRow(i)).join(''):'<div class="empty">Nada agendado para hoy.</div>'}</div>
-    <div class="ag segui"><h4>📞 Seguimiento (${seg.length})</h4><div class="sub">Presupuestos pendientes con 3 días o más — llamalos</div>
-      ${seg.length?seg.map(i=>{const d=daysSince(i.fecha);return agRow(i,`<span class="age ${d>3&&!i.seguir?'late':''}">${i.seguir?'re-contactar':'hace '+d+' días'}</span>`)}).join(''):'<div class="empty">Sin seguimientos pendientes. 👌</div>'}</div>`;
+    <div class="ag segui"><h4>📞 Seguimiento (${seg.length})</h4><div class="sub">Presupuestos pendientes con 3 días hábiles o más — llamalos</div>
+      ${seg.length?seg.map(i=>{const d=daysSince(i.fecha);return agRow(i,`<span class="age ${d>3&&!i.seguir?'late':''}">${i.seguir?'re-contactar':'hace '+d+' días hábiles'}</span>`)}).join(''):'<div class="empty">Sin seguimientos pendientes. 👌</div>'}</div>`;
 
   document.getElementById('vw').className=view==='week'?'on':'';
   document.getElementById('vm').className=view==='month'?'on':'';
@@ -276,17 +279,17 @@ function render(){
   const days=[];let title;
   if(view==='week'){
     const s=new Date(cursor);s.setDate(s.getDate()-((s.getDay()+6)%7));
-    for(let k=0;k<7;k++){const d=new Date(s);d.setDate(s.getDate()+k);days.push(d)}
-    const e=days[6];
+    for(let k=0;k<5;k++){const d=new Date(s);d.setDate(s.getDate()+k);days.push(d)}
+    const e=days[4];
     title=`${days[0].getDate()} ${days[0].toLocaleDateString('es-AR',{month:'short'})} – ${e.getDate()} ${e.toLocaleDateString('es-AR',{month:'short',year:'numeric'})}`;
   }else{
     const f=new Date(cursor.getFullYear(),cursor.getMonth(),1);
     const s=new Date(f);s.setDate(1-((f.getDay()+6)%7));
-    for(let k=0;k<42;k++){const d=new Date(s);d.setDate(s.getDate()+k);days.push(d)}
+    for(let k=0;k<42;k++){const d=new Date(s);d.setDate(s.getDate()+k);if(d.getDay()%6)days.push(d)}
     title=cursor.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
   }
   document.getElementById('title').textContent=title;
-  document.getElementById('dows').innerHTML=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(d=>`<div class="dow">${d}</div>`).join('');
+  document.getElementById('dows').innerHTML=['Lun','Mar','Mié','Jue','Vie'].map(d=>`<div class="dow">${d}</div>`).join('');
   const cal=document.getElementById('cal');cal.className='grid '+view;
   const max=view==='week'?14:3;
   cal.innerHTML=days.map(d=>{
@@ -309,7 +312,7 @@ function render(){
       <div>
         <b>${esc(i.numero||'s/n')} — ${esc(i.cliente)}</b>
         <div class="meta">${esc(i.equipo)}${i.equipo?' · ':''}${fmt(i.fecha)}${i.notas?' · '+esc(i.notas):''}</div>
-        <button class="del" onclick="del('${i.id}')">eliminar</button>
+        <button class="del edit" onclick="openEdit('${i.id}')">✏️ editar</button> · <button class="del" onclick="del('${i.id}')">eliminar</button>
       </div>
       <div class="acts">
         <button class="b-ok ${i.status==='hecho'?'on':''}" title="Hecho" onclick="setStatus('${i.id}','hecho')">✓</button>
@@ -353,7 +356,7 @@ function saveEdit(){
   if(!$('mCli').value.trim()){alert('Falta el cliente');return}
   i.cliente=$('mCli').value.trim();i.numero=$('mNum').value.trim();i.equipo=$('mEqu').value.trim();
   i.fecha=$('mFec').value||i.fecha;i.notas=$('mNot').value.trim();i.status=mStatus;
-  const sg=$('mSeg').value;i.seguir=(sg&&sg!==addDays(i.fecha,3))?sg:undefined;
+  const sg=$('mSeg').value;i.seguir=(sg&&sg!==addBiz(i.fecha,3))?sg:undefined;
   touch(i);closeEdit();render();
 }
 document.addEventListener('click',e=>{
