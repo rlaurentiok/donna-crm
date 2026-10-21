@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Certis · Registro diario</title>
+<style>
+:root{
+  --bg:#f4f5f7;--card:#fff;--ink:#1d2433;--mute:#6b7385;--line:#e3e6ec;--acc:#1f4fd1;
+  --ok:#1f9d55;--okbg:#dcf5e6;--pen:#d99a00;--penbg:#fff3c9;--can:#d93636;--canbg:#fde0e0;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+h1{margin:0;font-size:22px;letter-spacing:-.5px}
+h1 span{color:var(--acc)}
+.sync{font-size:12px;color:var(--mute);padding:4px 10px;border-radius:12px;background:#eef0f4}
+.sync.ok{color:#14693a;background:var(--okbg)}.sync.err{color:#9e2323;background:var(--canbg)}
+.stats{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.stat{padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid transparent}
+.stat.active{border-color:var(--ink)}
+.s-pen{background:var(--penbg);color:#8a6200}.s-ok{background:var(--okbg);color:#14693a}.s-can{background:var(--canbg);color:#9e2323}.s-all{background:#e8ecf5;color:var(--ink)}
+.tools{display:flex;gap:8px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 12px}
+button:hover{border-color:var(--mute)}
+.primary{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+main{display:grid;grid-template-columns:1fr 380px;gap:18px;padding:18px 22px;max-width:1500px;margin:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.calhead{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.calhead h2{margin:0 8px;font-size:17px;text-transform:capitalize;min-width:190px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-left:auto}
+.seg button{border:0;border-radius:0}.seg button.on{background:var(--ink);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.dow{font-size:11px;color:var(--mute);text-transform:uppercase;text-align:center;padding-bottom:4px;font-weight:600}
+.day{border:1px solid var(--line);border-radius:10px;padding:6px;min-height:92px;cursor:pointer;background:#fff;display:flex;flex-direction:column;gap:3px;overflow:hidden}
+.week .day{min-height:380px}
+.day.out{opacity:.4}
+.day.today{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.day.sel{background:#eef3ff}
+.day .n{font-size:12px;font-weight:700;color:var(--mute);display:flex;justify-content:space-between}
+.day.today .n{color:var(--acc)}
+.chip{font-size:11px;padding:3px 6px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;border-left:3px solid}
+.chip.pendiente{background:var(--penbg);border-color:var(--pen);color:#6e4f00}
+.chip.hecho{background:var(--okbg);border-color:var(--ok);color:#14693a}
+.chip.cancelado{background:var(--canbg);border-color:var(--can);color:#9e2323;text-decoration:line-through}
+.more{font-size:11px;color:var(--mute)}
+.dots{display:flex;gap:3px}.dot{width:7px;height:7px;border-radius:50%}
+.side h3{margin:0 0 10px;font-size:15px}
+form{display:grid;gap:8px;margin-bottom:6px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%;background:#fff;color:var(--ink)}
+textarea{resize:vertical;min-height:38px}
+.list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.item{border:1px solid var(--line);border-left:5px solid;border-radius:10px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
+.item.pendiente{border-left-color:var(--pen);background:#fffdf3}
+.item.hecho{border-left-color:var(--ok);background:#f6fdf9}
+.item.cancelado{border-left-color:var(--can);background:#fff8f8}
+.item b{font-size:14px}
+.item .meta{font-size:12px;color:var(--mute)}
+.item.cancelado b{text-decoration:line-through;color:var(--mute)}
+.acts{display:flex;gap:4px}
+.acts button{width:32px;height:32px;padding:0;font-size:15px;font-weight:700;border-radius:8px}
+.b-ok{color:var(--ok)}.b-pen{color:var(--pen)}.b-can{color:var(--can)}
+.b-ok.on{background:var(--ok);color:#fff;border-color:var(--ok)}
+.b-pen.on{background:var(--pen);color:#fff;border-color:var(--pen)}
+.b-can.on{background:var(--can);color:#fff;border-color:var(--can)}
+.del{border:0;background:none;color:var(--mute);font-size:12px;padding:0;text-align:left}
+.del:hover{color:var(--can)}
+.empty{color:var(--mute);font-size:13px;text-align:center;padding:18px}
+.tabs{display:flex;gap:6px;margin:14px 0 4px}
+.tabs button.on{background:var(--ink);color:#fff}
+#q{margin-top:6px}
+.banner{background:var(--penbg);border:1px solid #f1d98a;border-radius:10px;padding:8px 12px;font-size:13px;margin-bottom:12px;display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Certis<span>.</span></h1>
+  <span class="sync" id="sync">conectando…</span>
+  <div class="stats" id="stats"></div>
+  <div class="tools">
+    <button onclick="exportCSV()">⬇ CSV</button>
+    <button onclick="backup()">💾 Backup</button>
+    <button onclick="document.getElementById('imp').click()">↥ Restaurar</button>
+    <input type="file" id="imp" accept=".json" hidden onchange="restore(this)">
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="banner" id="banner"></div>
+    <div class="calhead">
+      <button onclick="move(-1)">‹</button>
+      <button onclick="goToday()">Hoy</button>
+      <button onclick="move(1)">›</button>
+      <h2 id="title"></h2>
+      <div class="seg"><button id="vw" onclick="setView('week')">Semana</button><button id="vm" onclick="setView('month')">Mes</button></div>
+    </div>
+    <div class="grid" id="dows"></div>
+    <div class="grid" id="cal"></div>
+  </section>
+
+  <aside class="card side">
+    <h3 id="selTitle">Cargar certificado</h3>
+    <form id="f" autocomplete="off">
+      <input id="cli" list="clis" placeholder="Cliente" required>
+      <datalist id="clis"></datalist>
+      <div class="row">
+        <input id="num" placeholder="N° certificado">
+        <input id="equ" list="equs" placeholder="Tipo de equipo">
+        <datalist id="equs"></datalist>
+      </div>
+      <div class="row">
+        <input id="fec" type="date" required>
+        <button class="primary" type="submit">+ Agregar</button>
+      </div>
+      <textarea id="not" placeholder="Notas (opcional)"></textarea>
+    </form>
+
+    <div class="tabs">
+      <button id="tDay" onclick="setTab('day')">Del día</button>
+      <button id="tPen" onclick="setTab('pen')">Todos los pendientes</button>
+    </div>
+    <input id="q" placeholder="Buscar cliente, N°, equipo…" oninput="render()">
+    <div class="list" id="list"></div>
+  </aside>
+</main>
+
+<script>
+const KEY='certis-cache-v1',QKEY='certis-queue-v1',PKEY='certis-pin';
+const ST={pendiente:{c:'var(--pen)'},hecho:{c:'var(--ok)'},cancelado:{c:'var(--can)'}};
+let all=[],queue={};
+try{all=JSON.parse(localStorage.getItem(KEY))||[];queue=JSON.parse(localStorage.getItem(QKEY))||{}}catch(e){}
+let items=all.filter(i=>!i.borrado);
+let view='week',tab='day',filter='all';
+const iso=d=>{const z=new Date(d);z.setMinutes(z.getMinutes()-z.getTimezoneOffset());return z.toISOString().slice(0,10)};
+const todayISO=iso(new Date());
+let sel=todayISO,cursor=new Date();
+// ---- sincronización ----
+function persist(){localStorage.setItem(KEY,JSON.stringify(all));localStorage.setItem(QKEY,JSON.stringify(queue));items=all.filter(i=>!i.borrado)}
+function touch(it){it.upd=Date.now();queue[it.id]=it;persist();sync()}
+function setSync(t,c){const e=document.getElementById('sync');e.textContent=t;e.className='sync '+(c||'')}
+let syncing=false,again=false;
+async function sync(){
+  if(syncing){again=true;return}
+  syncing=true;
+  try{
+    const pend=Object.values(queue);
+    const r=await fetch('/api/data',{method:pend.length?'POST':'GET',headers:{'Content-Type':'application/json','x-pin':localStorage.getItem(PKEY)||''},body:pend.length?JSON.stringify({items:pend}):undefined});
+    if(r.status===401){const p=prompt('Ingresá el PIN de Certis:');if(p!==null){localStorage.setItem(PKEY,p.trim());syncing=false;return sync()}throw 0}
+    if(!r.ok)throw 0;
+    const d=await r.json();
+    pend.forEach(p=>{if(queue[p.id]&&queue[p.id].upd===p.upd)delete queue[p.id]});
+    const map={};d.items.forEach(i=>map[i.id]=i);
+    Object.values(queue).forEach(i=>map[i.id]=i); // cambios locales aún no enviados
+    all=Object.values(map);persist();render();
+    setSync('☁ sincronizado '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}),'ok');
+  }catch(e){setSync('⚠ sin conexión — se guarda local y se sube al volver','err')}
+  syncing=false;
+  if(again){again=false;sync()}
+}
+setInterval(sync,20000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
+window.addEventListener('online',sync);
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=s=>{const[y,m,d]=s.split('-');return `${d}/${m}/${y}`};
+
+function setView(v){view=v;render()}
+function setTab(t){tab=t;render()}
+function goToday(){cursor=new Date();sel=todayISO;render()}
+function move(n){if(view==='week')cursor.setDate(cursor.getDate()+7*n);else cursor.setMonth(cursor.getMonth()+n);cursor=new Date(cursor);render()}
+function pick(d){sel=d;tab='day';document.getElementById('fec').value=d;render()}
+function setStatus(id,s){const it=all.find(i=>i.id===id);it.status=s;touch(it);render()}
+function del(id){if(confirm('¿Eliminar este registro?')){const it=all.find(i=>i.id===id);it.borrado=true;touch(it);render()}}
+
+document.getElementById('f').onsubmit=e=>{
+  e.preventDefault();
+  const g=id=>document.getElementById(id).value.trim();
+  const it={id:Date.now()+''+Math.random().toString(36).slice(2,6),cliente:g('cli'),numero:g('num'),equipo:g('equ'),fecha:g('fec'),notas:g('not'),status:'pendiente',creado:new Date().toISOString()};
+  all.push(it);touch(it);sel=g('fec');
+  ['cli','num','equ','not'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('cli').focus();render();
+};
+
+function matches(i){
+  const q=document.getElementById('q').value.toLowerCase();
+  if(filter!=='all'&&i.status!==filter)return false;
+  return !q||[i.cliente,i.numero,i.equipo,i.notas].join(' ').toLowerCase().includes(q);
+}
+
+function render(){
+  // stats
+  const c=s=>items.filter(i=>i.status===s).length;
+  document.getElementById('stats').innerHTML=
+    [['all','s-all','Todos',items.length],['pendiente','s-pen','Pendientes',c('pendiente')],['hecho','s-ok','Hechos',c('hecho')],['cancelado','s-can','Cancelados',c('cancelado')]]
+    .map(([k,cl,l,n])=>`<span class="stat ${cl} ${filter===k?'active':''}" onclick="filter='${k}';render()">${l}: ${n}</span>`).join('');
+
+  const old=items.filter(i=>i.status==='pendiente'&&i.fecha<todayISO).length;
+  const b=document.getElementById('banner');
+  b.style.display=old?'block':'none';
+  b.innerHTML=`⚠ Tenés <b>${old}</b> certificado${old>1?'s':''} pendiente${old>1?'s':''} de días anteriores. <a href="#" onclick="setTab('pen');return false">Ver</a>`;
+
+  document.getElementById('vw').className=view==='week'?'on':'';
+  document.getElementById('vm').className=view==='month'?'on':'';
+  document.getElementById('tDay').className=tab==='day'?'on':'';
+  document.getElementById('tPen').className=tab==='pen'?'on':'';
+
+  // calendar
+  const days=[];let title;
+  if(view==='week'){
+    const s=new Date(cursor);s.setDate(s.getDate()-((s.getDay()+6)%7));
+    for(let k=0;k<7;k++){const d=new Date(s);d.setDate(s.getDate()+k);days.push(d)}
+    const e=days[6];
+    title=`${days[0].getDate()} ${days[0].toLocaleDateString('es-AR',{month:'short'})} – ${e.getDate()} ${e.toLocaleDateString('es-AR',{month:'short',year:'numeric'})}`;
+  }else{
+    const f=new Date(cursor.getFullYear(),cursor.getMonth(),1);
+    const s=new Date(f);s.setDate(1-((f.getDay()+6)%7));
+    for(let k=0;k<42;k++){const d=new Date(s);d.setDate(s.getDate()+k);days.push(d)}
+    title=cursor.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+  }
+  document.getElementById('title').textContent=title;
+  document.getElementById('dows').innerHTML=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(d=>`<div class="dow">${d}</div>`).join('');
+  const cal=document.getElementById('cal');cal.className='grid '+view;
+  const max=view==='week'?14:3;
+  cal.innerHTML=days.map(d=>{
+    const k=iso(d),list=items.filter(i=>i.fecha===k&&matches(i));
+    const out=view==='month'&&d.getMonth()!==cursor.getMonth();
+    const dots=['pendiente','hecho','cancelado'].map(s=>list.some(i=>i.status===s)?`<span class="dot" style="background:${ST[s].c}"></span>`:'').join('');
+    return `<div class="day ${out?'out':''} ${k===todayISO?'today':''} ${k===sel?'sel':''}" onclick="pick('${k}')">
+      <div class="n"><span>${d.getDate()}</span><span class="dots">${dots}</span></div>
+      ${list.slice(0,max).map(i=>`<div class="chip ${i.status}" title="${esc(i.cliente)} · ${esc(i.numero)}">${esc(i.numero||'s/n')} · ${esc(i.cliente)}</div>`).join('')}
+      ${list.length>max?`<div class="more">+${list.length-max} más</div>`:''}
+    </div>`}).join('');
+
+  // side list
+  document.getElementById('selTitle').textContent='Cargar certificado';
+  let L=tab==='day'?items.filter(i=>i.fecha===sel&&matches(i)):items.filter(i=>i.status==='pendiente'&&matches(i));
+  L.sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.creado.localeCompare(b.creado));
+  const head=tab==='day'?`<div class="meta" style="font-size:13px;color:var(--mute)">${new Date(sel+'T12:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})} · ${L.length} registro${L.length!==1?'s':''}</div>`:'';
+  document.getElementById('list').innerHTML=head+(L.length?L.map(i=>`
+    <div class="item ${i.status}">
+      <div>
+        <b>${esc(i.numero||'s/n')} — ${esc(i.cliente)}</b>
+        <div class="meta">${esc(i.equipo)}${i.equipo?' · ':''}${fmt(i.fecha)}${i.notas?' · '+esc(i.notas):''}</div>
+        <button class="del" onclick="del('${i.id}')">eliminar</button>
+      </div>
+      <div class="acts">
+        <button class="b-ok ${i.status==='hecho'?'on':''}" title="Hecho" onclick="setStatus('${i.id}','hecho')">✓</button>
+        <button class="b-pen ${i.status==='pendiente'?'on':''}" title="Pendiente" onclick="setStatus('${i.id}','pendiente')">●</button>
+        <button class="b-can ${i.status==='cancelado'?'on':''}" title="Cancelado" onclick="setStatus('${i.id}','cancelado')">✕</button>
+      </div>
+    </div>`).join(''):'<div class="empty">Nada por acá todavía.</div>');
+
+  // autocomplete
+  const uniq=f=>[...new Set(items.map(i=>i[f]).filter(Boolean))].sort();
+  document.getElementById('clis').innerHTML=uniq('cliente').map(v=>`<option value="${esc(v)}">`).join('');
+  document.getElementById('equs').innerHTML=uniq('equipo').map(v=>`<option value="${esc(v)}">`).join('');
+}
+
+function dl(name,content,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click()}
+function exportCSV(){
+  const rows=[['Fecha','Cliente','N° certificado','Equipo','Estado','Notas'],...[...items].sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(i=>[fmt(i.fecha),i.cliente,i.numero,i.equipo,i.status,i.notas])];
+  dl(`certis_${todayISO}.csv`,'\ufeff'+rows.map(r=>r.map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(';')).join('\n'),'text/csv');
+}
+function backup(){dl(`certis_backup_${todayISO}.json`,JSON.stringify(items,null,1),'application/json')}
+function restore(inp){
+  const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d))throw 0;if(confirm(`Restaurar ${d.length} registros del backup? Se suman a los actuales (no borra nada).`)){const now=Date.now();d.forEach(x=>{if(!all.some(i=>i.id===x.id)){x.upd=now;all.push(x);queue[x.id]=x}});persist();render();sync()}}catch(e){alert('Archivo inválido')}};
+  r.readAsText(inp.files[0]);inp.value='';
+}
+
+document.getElementById('fec').value=todayISO;
+render();sync();
+</script>
+</body>
+</html>
